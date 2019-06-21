@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -eu
 
@@ -13,10 +13,7 @@ export OUTPUT
 
 echo "running..."
 for f in ./input/prob-*.desc; do
-    ID=$(echo $f | sed -E 's/\.\/input\/prob\-([0-9]+)\.desc/\1/')
-    INPUT_FILE=./input/prob-$ID.desc
-    OUTPUT_FILE=$OUTPUT/prob-$ID.sol
-    ./target/release/icfpc2019 < $INPUT_FILE > $OUTPUT_FILE
+    ./solve_single.sh $f $OUTPUT
 done
 
 echo "Creating zip $OUTPUT/solutions.zip"
