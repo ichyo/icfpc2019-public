@@ -14,3 +14,4 @@ echo "Creating $OUTPUT"
 mkdir -p $OUTPUT
 
 ./target/release/icfpc2019 --output $OUTPUT --input ./input
+cargo run --bin score --release -- --input ./input --output $OUTPUT
