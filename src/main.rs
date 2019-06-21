@@ -268,6 +268,7 @@ fn read_input(s: &str) -> Input {
 }
 
 fn solve_small(input: Input) -> Vec<Command> {
+    let mut rng = thread_rng();
     let map_points = input.map.enumerate_points();
 
     let width = map_points.iter().map(|p| p.x).max().unwrap() + 1;
@@ -303,6 +304,59 @@ fn solve_small(input: Input) -> Vec<Command> {
     if !passed[cp.y][cp.x] {
         passed[cp.y][cp.x] = true;
         remaining -= 1;
+    }
+    let mut start = Vec::new();
+    for y in 0..height {
+        for x in 0..width {
+            let connect_to_invalid = moves
+                .iter()
+                .filter_map(|m| Point::new(x, y).move_with(*m))
+                .filter(|p| p.x < width && p.y < height)
+                .any(|p| !valid[p.y][p.x]);
+
+            if valid[y][x] && connect_to_invalid {
+                start.push(Point::new(x, y));
+            }
+        }
+    }
+    let start = start.choose(&mut rng).unwrap();
+    {
+        let mut data = vec![vec![None; width]; height];
+        let mut queue = VecDeque::new();
+        queue.push_back(cp);
+        data[cp.y][cp.x] = Some(Command::Noop);
+        while let Some(c) = queue.pop_front() {
+            if c == *start {
+                passed[c.y][c.x] = true;
+                remaining -= 1;
+
+                let mut local_cmds = Vec::new();
+                let mut iter = c;
+                while iter != cp {
+                    let cmd = data[iter.y][iter.x].unwrap();
+                    local_cmds.push(cmd);
+                    iter = iter.revert_with(cmd).unwrap();
+                }
+                local_cmds.reverse();
+                res.extend(local_cmds);
+
+                cp = c;
+                break;
+            }
+            moves.shuffle(&mut rng);
+            for m in &moves {
+                if let Some(nc) = c.move_with(*m) {
+                    if nc.x < width
+                        && nc.y < height
+                        && data[nc.y][nc.x].is_none()
+                        && valid[nc.y][nc.x]
+                    {
+                        data[nc.y][nc.x] = Some(*m);
+                        queue.push_back(nc);
+                    }
+                }
+            }
+        }
     }
     while remaining > 0 {
         let mut data = vec![vec![None; width]; height];
@@ -352,7 +406,10 @@ fn solve<R: Read, W: Write>(input_f: &mut R, f: &mut W) {
     input_f.read_to_string(&mut input).unwrap();
     let input = input.trim_end();
     let input = read_input(&input);
-    let cmds = solve_small(input);
+    let cmds = (0..100)
+        .map(|_| solve_small(input.clone()))
+        .min_by_key(|cmds| cmds.len())
+        .unwrap();
     for cmd in cmds {
         let c = match cmd {
             Command::MoveUp => 'W',
