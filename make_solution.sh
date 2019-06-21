@@ -20,4 +20,5 @@ for f in ./input/prob-*.desc; do
 done
 
 echo "Creating zip $OUTPUT/solutions.zip"
-zip $OUTPUT/solutions.zip $OUTPUT
+cd $OUTPUT
+zip solutions.zip ./*.sol -q
