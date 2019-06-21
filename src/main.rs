@@ -2,6 +2,7 @@ use clap::{App, Arg};
 use glob::glob;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use rayon::prelude::*;
 use std::cmp;
 use std::collections::{HashMap, VecDeque};
 use std::fs::File;
@@ -399,7 +400,7 @@ fn main() {
     };
 
     let files = find_files(&input_root);
-    for f in files.iter().take(number as usize) {
+    files.into_par_iter().take(number as usize).for_each(|f| {
         let input_path = format!("{}/{}", input_root, f);
         let mut input_file = File::open(&input_path).unwrap();
         match output_root {
@@ -412,5 +413,5 @@ fn main() {
                 solve(&mut input_file, &mut std::io::stdout());
             }
         };
-    }
+    });
 }
