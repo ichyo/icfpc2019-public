@@ -2,6 +2,9 @@
 
 set -eu
 
+BASEDIR=$(dirname "$0")
+cd $BASEDIR
+
 echo "Building main"
 cargo build --release
 
