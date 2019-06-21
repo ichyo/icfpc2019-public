@@ -1,12 +1,9 @@
 use clap::{App, Arg};
 use glob::glob;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
 use std::cmp;
 use std::collections::{HashMap, VecDeque};
 use std::fs::File;
-use std::io::sink;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::iter::Peekable;
 use std::str::Chars;
 
@@ -27,7 +24,6 @@ fn find_files(input_root: &str) -> Vec<String> {
 fn output_file_name(file_name: &str) -> String {
     format!("prob-{}.sol", &file_name[5..8])
 }
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 struct Point {
     x: usize,
@@ -54,23 +50,17 @@ impl Point {
             _ => Some(*self),
         }
     }
-    fn revert_with(&self, command: Command) -> Option<Point> {
-        let (x, y) = (self.x, self.y);
-        match command {
-            Command::MoveDown => Some(Point::new(x, y + 1)),
-            Command::MoveUp => match self.y {
-                0 => None,
-                _ => Some(Point::new(x, y - 1)),
-            },
-            Command::MoveLeft => Some(Point::new(x + 1, y)),
-            Command::MoveRight => match self.x {
-                0 => None,
-                _ => Some(Point::new(x - 1, y)),
-            },
-            _ => unreachable!(),
-        }
-    }
 }
+
+#[derive(Debug, Clone)]
+enum BoosterType {
+    NewHand,
+    FastMove,
+    Drill,
+    Unknown,
+}
+
+type Booster = (BoosterType, Point);
 
 #[derive(Debug, Clone)]
 struct Map(Vec<Point>);
@@ -127,16 +117,6 @@ impl Map {
         res
     }
 }
-
-#[derive(Debug, Clone)]
-enum BoosterType {
-    NewHand,
-    FastMove,
-    Drill,
-    Unknown,
-}
-
-type Booster = (BoosterType, Point);
 
 #[derive(Debug, Clone)]
 struct Input {
@@ -266,7 +246,38 @@ fn read_input(s: &str) -> Input {
     }
 }
 
-fn solve_small(input: Input) -> Vec<Command> {
+struct ScoreInfo {
+    width: usize,
+    height: usize,
+    best_estimated: usize,
+    team_time: usize,
+}
+
+impl ScoreInfo {
+    fn log_wh(&self) -> f64 {
+        let wh = self.width as f64 * self.height as f64;
+        wh.log2()
+    }
+
+    fn ratio(&self) -> f64 {
+        self.best_estimated as f64 / self.team_time as f64
+    }
+
+    fn debug(&self) -> String {
+        format!(
+            "1000.0 * {:5.2} * {:4.2} = {:8.2}",
+            self.log_wh(),
+            self.ratio(),
+            self.score()
+        )
+    }
+
+    fn score(&self) -> f64 {
+        1000.0 * self.log_wh() * self.ratio()
+    }
+}
+
+fn score_small(input: Input, output_len: usize) -> ScoreInfo {
     let map_points = input.map.enumerate_points();
 
     let width = map_points.iter().map(|p| p.x).max().unwrap() + 1;
@@ -291,81 +302,16 @@ fn solve_small(input: Input) -> Vec<Command> {
         }
     }
 
-    let mut moves = [
-        Command::MoveUp,
-        Command::MoveDown,
-        Command::MoveLeft,
-        Command::MoveRight,
-    ];
-    let mut res = Vec::new();
-    let mut cp = input.initial;
-    if !passed[cp.y][cp.x] {
-        passed[cp.y][cp.x] = true;
-        remaining -= 1;
-    }
-    while remaining > 0 {
-        let mut data = vec![vec![None; width]; height];
-        let mut queue = VecDeque::new();
-        queue.push_back(cp);
-        data[cp.y][cp.x] = Some(Command::Noop);
-        while let Some(c) = queue.pop_front() {
-            if !passed[c.y][c.x] {
-                passed[c.y][c.x] = true;
-                remaining -= 1;
-
-                let mut local_cmds = Vec::new();
-                let mut iter = c;
-                while iter != cp {
-                    let cmd = data[iter.y][iter.x].unwrap();
-                    local_cmds.push(cmd);
-                    iter = iter.revert_with(cmd).unwrap();
-                }
-                local_cmds.reverse();
-                res.extend(local_cmds);
-
-                cp = c;
-                break;
-            }
-            let mut rng = thread_rng();
-            moves.shuffle(&mut rng);
-            for m in &moves {
-                if let Some(nc) = c.move_with(*m) {
-                    if nc.x < width
-                        && nc.y < height
-                        && data[nc.y][nc.x].is_none()
-                        && valid[nc.y][nc.x]
-                    {
-                        data[nc.y][nc.x] = Some(*m);
-                        queue.push_back(nc);
-                    }
-                }
-            }
-        }
-    }
-
-    res
-}
-
-fn solve<R: Read, W: Write>(input_f: &mut R, f: &mut W) {
-    let mut input = String::new();
-    input_f.read_to_string(&mut input).unwrap();
-    let input = input.trim_end();
-    let input = read_input(&input);
-    let cmds = solve_small(input);
-    for cmd in cmds {
-        let c = match cmd {
-            Command::MoveUp => 'W',
-            Command::MoveDown => 'S',
-            Command::MoveLeft => 'A',
-            Command::MoveRight => 'D',
-            _ => unreachable!(),
-        };
-        write!(f, "{}", c);
+    ScoreInfo {
+        width,
+        height,
+        best_estimated: remaining,
+        team_time: output_len,
     }
 }
 
 fn main() {
-    let matches = App::new("ICFPC 2019")
+    let matches = App::new("Score checker")
         .version("0.1.0")
         .arg(
             Arg::with_name("input")
@@ -379,38 +325,26 @@ fn main() {
                 .takes_value(true)
                 .help("output directory"),
         )
-        .arg(
-            Arg::with_name("number")
-                .long("number")
-                .short("n")
-                .takes_value(true)
-                .help("number of test cases to solve"),
-        )
         .get_matches();
-
     let input_root = matches.value_of("input").expect("no input specified");
-    let output_root = matches.value_of("output");
-    let number = match matches.value_of("number") {
-        Some(s) => match s.parse::<u32>() {
-            Ok(n) => n,
-            _ => u32::max_value(),
-        },
-        _ => u32::max_value(),
-    };
-
+    let output_root = matches.value_of("output").expect("no output specified");
     let files = find_files(&input_root);
-    for f in files.iter().take(number as usize) {
+
+    let mut sum_scores = 0.0;
+    for f in files.iter() {
         let input_path = format!("{}/{}", input_root, f);
         let mut input_file = File::open(&input_path).unwrap();
-        match output_root {
-            Some(output_root) => {
-                let output_path = format!("{}/{}", output_root, output_file_name(&f));
-                let mut output_file = File::create(&output_path).unwrap();
-                solve(&mut input_file, &mut output_file);
-            }
-            None => {
-                solve(&mut input_file, &mut std::io::stdout());
-            }
-        };
+        let output_path = format!("{}/{}", output_root, output_file_name(&f));
+        let mut output_file = File::open(&output_path).unwrap();
+        let mut input_str = String::new();
+        input_file.read_to_string(&mut input_str);
+        let mut output_str = String::new();
+        output_file.read_to_string(&mut output_str);
+        let output_len = output_str.trim_end().len();
+        let score_info = score_small(read_input(&input_str), output_len);
+        eprintln!("{}: {}", f, score_info.debug());
+        sum_scores += score_info.score();
     }
+    println!("output: {}", output_root);
+    println!("total_score: {}", sum_scores);
 }
