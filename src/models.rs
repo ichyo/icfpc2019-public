@@ -57,6 +57,15 @@ impl Map {
     pub fn new(ps: Vec<Point>) -> Map {
         Map(ps)
     }
+
+    pub fn compute_width(&self) -> usize {
+        self.0.iter().map(|p| p.x).max().unwrap() as usize + 1
+    }
+
+    pub fn compute_height(&self) -> usize {
+        self.0.iter().map(|p| p.y).max().unwrap() as usize + 1
+    }
+
     pub fn iter_lines(&self) -> Vec<(Direction, Point, Point)> {
         let mut iter = self.0.iter().cloned().cycle().peekable();
         let mut res = Vec::new();
@@ -128,6 +137,8 @@ impl Booster {
 
 #[derive(Debug, Clone)]
 pub struct Task {
+    pub width: usize,
+    pub height: usize,
     pub map: Map,
     pub initial: Point,
     pub obstacles: Vec<Map>,

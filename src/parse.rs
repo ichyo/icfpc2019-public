@@ -143,7 +143,11 @@ fn read_task(s: &str) -> Task {
     let initial = read_initial(&mut iter);
     let obstacles = read_obstacles(&mut iter);
     let boosters = read_boosters(&mut iter);
+    let width = map.compute_width();
+    let height = map.compute_height();
     Task {
+        width,
+        height,
         map,
         initial,
         obstacles,

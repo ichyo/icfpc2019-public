@@ -5,237 +5,235 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::VecDeque;
 
-trait Solver {
-    fn solve(task: Task) -> Vec<Command>;
+pub struct State<'a> {
+    task: &'a Task,
+    current_point: Point,
+    valid: Matrix<bool>,
+    passed: Matrix<bool>,
+    booster_map: Matrix<Option<BoosterType>>,
+    bodies_diff: Vec<Point>,
+    new_bodies: VecDeque<Point>,
+    remaining: usize,
+    hand_count: usize,
+    tele_count: usize,
+    tele_points: Vec<Point>,
+    commands: Vec<Command>,
 }
 
-fn find_shortest_path(
-    width: usize,
-    height: usize,
-    valid: &Matrix<bool>,
-    passed: &Matrix<bool>,
-    start: Point,
-    bodies_diff: &[Point],
-    booster_map: &Matrix<Option<BoosterType>>,
-) -> Vec<Move> {
-    let mut rng = thread_rng();
-    let mut moves = [
-        Move::MoveUp,
-        Move::MoveDown,
-        Move::MoveLeft,
-        Move::MoveRight,
-    ];
+impl<'a> State<'a> {
+    fn initialize(task: &'a Task) -> State<'a> {
+        let map_points = task.map.enumerate_points();
 
-    let mut data: Matrix<Option<(Move, u16)>> = Matrix::new(width, height, None);
-    let mut queue = VecDeque::new();
-    queue.push_back(start);
-    data.set(start, Some((Move::Noop, 0)));
-    while let Some(c) = queue.pop_front() {
-        let cost = match data.get(c) {
-            Some(Some((_, cost))) => *cost,
-            _ => panic!("no data is expected"),
-        };
+        let width = task.width;
+        let height = task.height;
 
-        let not_passed = bodies_diff
-            .iter()
-            .map(|diff| c + *diff)
-            .any(|p| match passed.get(p) {
-                Some(false) => true,
-                _ => false,
-            });
+        let mut remaining = 0;
+        let mut booster_map = Matrix::new(width, height, None);
+        let mut passed = Matrix::new(width, height, true);
+        let mut valid = Matrix::new(width, height, false);
 
-        let is_booster = match booster_map.get(c) {
-            Some(Some(BoosterType::NewHand)) => true,
-            _ => false,
-        };
-
-        let is_valid = match valid.get(c) {
-            Some(true) => true,
-            _ => false,
-        };
-
-        if is_valid && (not_passed || is_booster) {
-            let mut res = Vec::new();
-            let mut iter = c;
-            while iter != start {
-                let (mv, _cost) = match data.get(iter) {
-                    Some(Some((mv, cost))) => (mv, cost),
-                    _ => panic!("no data"),
-                };
-                iter = iter.revert_with(mv);
-                res.push(mv.clone());
-            }
-            res.reverse();
-            return res;
+        for &p in &map_points {
+            passed.set(p, false);
+            valid.set(p, true);
+            remaining += 1;
         }
 
-        moves.shuffle(&mut rng);
-        for m in &moves {
-            let nc = c.move_with(m);
-            if let Some(None) = data.get(nc) {
-                if let Some(true) = valid.get(nc) {
-                    data.set(nc, Some((m.clone(), cost + 1)));
-                    queue.push_back(nc);
+        for b in &task.boosters {
+            booster_map.set(b.point, Some(b.kind.clone()));
+        }
+
+        for o in &task.obstacles {
+            for &p in o.enumerate_points().iter() {
+                if let Some(true) = valid.get(p) {
+                    valid.set(p, false);
+                    passed.set(p, true);
+                    remaining -= 1;
                 }
             }
         }
-    }
-    panic!("cannot reach anywhere");
-}
 
-fn update_point(
-    point: Point,
-    bodies_diff: &[Point],
-    passed: &mut Matrix<bool>,
-    booster_map: &mut Matrix<Option<BoosterType>>,
-    hand_count: &mut usize,
-    tele_count: &mut usize,
-    remaining: &mut usize,
-) {
-    bodies_diff.iter().map(|diff| point + *diff).for_each(|b| {
-        if let Some(false) = passed.get(b) {
-            passed.set(b, true);
-            *remaining -= 1;
+
+        let current_point = task.initial;
+
+        let bodies_diff = vec![
+            Point::new(0, 0),
+            Point::new(1, 1),
+            Point::new(1, 0),
+            Point::new(1, -1),
+        ];
+        let new_bodies = VecDeque::from(vec![
+            Point::new(-1, 0),
+            Point::new(-1, 1),
+            Point::new(-1, -1),
+            Point::new(0, -1),
+            Point::new(0, 1),
+        ]);
+
+        let hand_count = 0;
+        let tele_count = 0;
+        let tele_points = Vec::new();
+        let commands = Vec::new();
+
+        State {
+            task,
+            current_point,
+            valid,
+            passed,
+            booster_map,
+            bodies_diff,
+            new_bodies,
+            remaining,
+            hand_count,
+            tele_count,
+            tele_points,
+            commands,
         }
-    });
-    if let Some(Some(kind)) = booster_map.get(point) {
-        match kind {
-            BoosterType::NewHand => *hand_count += 1,
-            BoosterType::Teleports => *tele_count += 1,
-            BoosterType::Drill => {}
-            _ => {}
-        }
-        booster_map.set(point, None);
-    }
-}
-
-pub fn solve_small(task: Task) -> Vec<Command> {
-    let map_points = task.map.enumerate_points();
-
-    let width = map_points.iter().map(|p| p.x).max().unwrap() as usize + 1;
-    let height = map_points.iter().map(|p| p.y).max().unwrap() as usize + 1;
-
-    let mut remaining = 0;
-    let mut booster_map = Matrix::new(width, height, None);
-    let mut passed = Matrix::new(width, height, true);
-    let mut valid = Matrix::new(width, height, false);
-
-    for &p in &map_points {
-        passed.set(p, false);
-        valid.set(p, true);
-        remaining += 1;
     }
 
-    for b in &task.boosters {
-        booster_map.set(b.point, Some(b.kind.clone()));
-    }
+    fn find_shortest_path(&self, start: Point) -> Vec<Move> {
+        let mut rng = thread_rng();
+        let mut moves = [
+            Move::MoveUp,
+            Move::MoveDown,
+            Move::MoveLeft,
+            Move::MoveRight,
+        ];
 
-    for o in &task.obstacles {
-        for &p in o.enumerate_points().iter() {
-            if let Some(true) = valid.get(p) {
-                valid.set(p, false);
-                passed.set(p, true);
-                remaining -= 1;
+        let mut data: Matrix<Option<(Move, u16)>> =
+            Matrix::new(self.task.width, self.task.height, None);
+        let mut queue = VecDeque::new();
+        queue.push_back(start);
+        data.set(start, Some((Move::Noop, 0)));
+        while let Some(c) = queue.pop_front() {
+            let cost = match data.get(c) {
+                Some(Some((_, cost))) => *cost,
+                _ => panic!("no data is expected"),
+            };
+
+            let not_passed =
+                self.bodies_diff
+                    .iter()
+                    .map(|diff| c + *diff)
+                    .any(|p| match self.passed.get(p) {
+                        Some(false) => true,
+                        _ => false,
+                    });
+
+            let is_booster = match self.booster_map.get(c) {
+                Some(Some(BoosterType::NewHand)) => true,
+                _ => false,
+            };
+
+            let is_valid = match self.valid.get(c) {
+                Some(true) => true,
+                _ => false,
+            };
+
+            if is_valid && (not_passed || is_booster) {
+                let mut res = Vec::new();
+                let mut iter = c;
+                while iter != start {
+                    let (mv, _cost) = match data.get(iter) {
+                        Some(Some((mv, cost))) => (mv, cost),
+                        _ => panic!("no data"),
+                    };
+                    iter = iter.revert_with(mv);
+                    res.push(mv.clone());
+                }
+                res.reverse();
+                return res;
+            }
+
+
+            moves.shuffle(&mut rng);
+            for m in &moves {
+                let nc = c.move_with(m);
+                if let Some(None) = data.get(nc) {
+                    if let Some(true) = self.valid.get(nc) {
+                        data.set(nc, Some((m.clone(), cost + 1)));
+                        queue.push_back(nc);
+                    }
+                }
             }
         }
+        panic!("cannot reach anywhere");
+
     }
 
-    let mut res = Vec::new();
-    let mut current_point = task.initial;
-
-    let mut bodies_diff = vec![
-        Point::new(0, 0),
-        Point::new(1, 1),
-        Point::new(1, 0),
-        Point::new(1, -1),
-    ];
-    let mut new_bodies = VecDeque::from(vec![
-        Point::new(-1, 0),
-        Point::new(-1, 1),
-        Point::new(-1, -1),
-        Point::new(0, -1),
-        Point::new(0, 1),
-    ]);
-
-    let mut hand_count = 0;
-    let mut tele_count = 0;
-    let mut tele_points = Vec::new();
-
-    while remaining > 0 {
-        while hand_count > 0 && !new_bodies.is_empty() {
-            let new_hand = new_bodies.pop_front().unwrap();
-            hand_count -= 1;
-            bodies_diff.push(new_hand);
-            res.push(Command::NewHand(new_hand));
-        }
-
-        if tele_count > 0 {
-            tele_points.push(current_point);
-            tele_count -= 1;
-            res.push(Command::ResetBeacon);
-        }
-
-        update_point(
-            current_point,
-            &bodies_diff,
-            &mut passed,
-            &mut booster_map,
-            &mut hand_count,
-            &mut tele_count,
-            &mut remaining,
-        );
-
-        let base_moves = find_shortest_path(
-            width,
-            height,
-            &valid,
-            &passed,
-            current_point,
-            &bodies_diff,
-            &booster_map,
-        );
-
-        let tele_moves = tele_points
+    fn pass_current_point(&mut self) {
+        let bodies = self
+            .bodies_diff
             .iter()
-            .map(|start| {
-                (
-                    start,
-                    find_shortest_path(
-                        width,
-                        height,
-                        &valid,
-                        &passed,
-                        *start,
-                        &bodies_diff,
-                        &booster_map,
-                    ),
-                )
-            })
+            .cloned()
+            .map(|diff| self.current_point + diff)
+            .collect::<Vec<_>>();
+        for b in bodies {
+            if let Some(false) = self.passed.get(b) {
+                self.passed.set(b, true);
+                self.remaining -= 1;
+            }
+        }
+        if let Some(Some(kind)) = self.booster_map.get(self.current_point) {
+            match kind {
+                BoosterType::NewHand => self.hand_count += 1,
+                BoosterType::Teleports => self.tele_count += 1,
+                BoosterType::Drill => {}
+                _ => {}
+            }
+            self.booster_map.set(self.current_point, None);
+        }
+    }
+
+    // true if it continues
+    pub fn next_state(&mut self) -> bool {
+        while self.hand_count > 0 && !self.new_bodies.is_empty() {
+            let new_hand = self.new_bodies.pop_front().unwrap();
+            self.hand_count -= 1;
+            self.bodies_diff.push(new_hand);
+            self.commands.push(Command::NewHand(new_hand));
+        }
+
+        if self.tele_count > 0 {
+            self.tele_points.push(self.current_point);
+            self.tele_count -= 1;
+            self.commands.push(Command::ResetBeacon);
+        }
+
+        self.pass_current_point();
+
+        let base_moves = self.find_shortest_path(self.current_point);
+
+        let tele_moves = self
+            .tele_points
+            .iter()
+            .map(|start| (start, self.find_shortest_path(*start)))
             .min_by_key(|(_, v)| v.len());
 
         let moves = match tele_moves {
             Some((tele_point, ref tele_moves)) if tele_moves.len() + 1 < base_moves.len() => {
-                res.push(Command::ShiftBeacon(*tele_point));
-                current_point = *tele_point;
+                self.commands.push(Command::ShiftBeacon(*tele_point));
+                self.current_point = *tele_point;
                 tele_moves
             }
             _ => &base_moves,
         };
 
         for m in moves {
-            current_point = current_point.move_with(&m);
-            update_point(
-                current_point,
-                &bodies_diff,
-                &mut passed,
-                &mut booster_map,
-                &mut hand_count,
-                &mut tele_count,
-                &mut remaining,
-            );
-            res.push(Command::Move(m.clone()));
+            self.current_point = self.current_point.move_with(&m);
+            self.pass_current_point();
+            self.commands.push(Command::Move(m.clone()));
+        }
+
+        self.remaining > 0
+    }
+}
+
+pub fn solve_small(task: Task) -> Vec<Command> {
+    let mut state = State::initialize(&task);
+    loop {
+        if !state.next_state() {
+            break;
         }
     }
-
-    res
+    state.commands
 }
