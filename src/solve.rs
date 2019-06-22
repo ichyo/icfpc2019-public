@@ -3,7 +3,7 @@ use crate::utils::Matrix;
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct State<'a> {
@@ -97,16 +97,12 @@ impl<'a> State<'a> {
             Move::MoveRight,
         ];
 
-        let mut data: Matrix<Option<(Move, u16)>> =
-            Matrix::new(self.task.width, self.task.height, None);
+        let mut data: HashMap<Point, (Move, u32)> = HashMap::new();
         let mut queue = VecDeque::new();
         queue.push_back(start);
-        data.set(start, Some((Move::Noop, 0)));
+        data.insert(start, (Move::Noop, 0));
         while let Some(c) = queue.pop_front() {
-            let cost = match data.get(c) {
-                Some(Some((_, cost))) => *cost,
-                _ => panic!("no data is expected"),
-            };
+            let (_, cost) = data[&c];
 
             let not_passed =
                 self.bodies_diff
@@ -131,10 +127,7 @@ impl<'a> State<'a> {
                 let mut res = Vec::new();
                 let mut iter = c;
                 while iter != start {
-                    let (mv, _cost) = match data.get(iter) {
-                        Some(Some((mv, cost))) => (mv, cost),
-                        _ => panic!("no data"),
-                    };
+                    let (mv, _) = &data[&iter];
                     iter = iter.revert_with(mv);
                     res.push(mv.clone());
                 }
@@ -142,15 +135,14 @@ impl<'a> State<'a> {
                 return res;
             }
 
-
             moves.shuffle(&mut rng);
             for m in &moves {
                 let nc = c.move_with(m);
-                if let Some(None) = data.get(nc) {
-                    if let Some(true) = self.valid.get(nc) {
-                        data.set(nc, Some((m.clone(), cost + 1)));
+                if let Some(true) = self.valid.get(nc) {
+                    data.entry(nc).or_insert_with(|| {
                         queue.push_back(nc);
-                    }
+                        (m.clone(), cost + 1)
+                    });
                 }
             }
         }

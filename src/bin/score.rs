@@ -24,11 +24,14 @@ impl ScoreInfo {
 
     fn debug(&self) -> String {
         format!(
-            "1000.0 * {:5.2} * {:4.2} = {:8.2} ({:6} steps)",
+            "1000.0 * {:5.2} * {:4.2} = {:8.2} ({:6} steps) ({:3} x {:3} = {:6})",
             self.log_wh(),
             self.ratio(),
             self.score(),
-            self.team_time
+            self.team_time,
+            self.width,
+            self.height,
+            self.width * self.height
         )
     }
 
