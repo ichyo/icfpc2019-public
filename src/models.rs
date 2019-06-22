@@ -51,7 +51,7 @@ pub enum Direction {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Map(Vec<Point>);
+pub struct Map(pub Vec<Point>);
 
 impl Map {
     pub fn new(ps: Vec<Point>) -> Map {
@@ -120,7 +120,7 @@ pub enum BoosterType {
     Drill,
     Teleports,
     Cloning,
-    Unknown,
+    Spawn,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -180,9 +180,23 @@ impl fmt::Display for Command {
             Command::FastWheel => write!(f, "F"),
             Command::Drill => write!(f, "L"),
             Command::ResetBeacon => write!(f, "R"),
-            Command::ShiftBeacon(p) => write!(f, "T({}, {})", p.x, p.y)
+            Command::ShiftBeacon(p) => write!(f, "T({}, {})", p.x, p.y),
         }
     }
 }
 
-
+pub struct Puzzle {
+    pub block: usize,
+    pub epock: usize,
+    pub max_length: usize,
+    pub vertex_min: usize,
+    pub vertex_max: usize,
+    pub hand_count: usize,
+    pub fast_count: usize,
+    pub drill_count: usize,
+    pub tele_count: usize,
+    pub clone_count: usize,
+    pub spawn_count: usize,
+    pub includes: Vec<Point>,
+    pub excludes: Vec<Point>,
+}

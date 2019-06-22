@@ -28,6 +28,12 @@ pub struct Client {
     api: LambdaClient<HttpHandle>,
 }
 
+impl Default for Client {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Client {
     pub fn new() -> Client {
         let transport = HttpTransport::new().standalone().unwrap();

@@ -1,10 +1,10 @@
 use crate::models::*;
 use glob::glob;
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io::Read;
 use std::iter::Peekable;
 use std::str::Chars;
-use std::convert::TryFrom;
 
 pub struct Input {
     pub id: String,
@@ -51,41 +51,36 @@ fn skip_or_empty(iter: &mut Peekable<Chars>, expected: char) {
     }
 }
 
-fn read_point(iter: &mut Peekable<Chars>) -> Point {
-    skip(iter, '(');
+fn read_usize(iter: &mut Peekable<Chars>, last: char) -> usize {
     let mut x = 0usize;
     loop {
         let c = iter.next().unwrap();
         if c.is_digit(10) {
             x = x * 10 + (c as u8 - b'0') as usize;
         } else {
-            assert!(c == ',');
-            break;
+            assert!(c == last);
+            return x;
         }
     }
-    let mut y = 0usize;
-    loop {
-        let c = iter.next().unwrap();
-        if c.is_digit(10) {
-            y = y * 10 + (c as u8 - b'0') as usize;
-        } else {
-            assert!(c == ')');
-            break;
-        }
-    }
+}
+
+fn read_point(iter: &mut Peekable<Chars>) -> Point {
+    skip(iter, '(');
+    let x = read_usize(iter, ',');
+    let y = read_usize(iter, ')');
     Point::new(i32::try_from(x).unwrap(), i32::try_from(y).unwrap())
 }
 
 fn read_map_internal(mut iter: &mut Peekable<Chars>) -> (Map, char) {
     let mut points = Vec::new();
     points.push(read_point(&mut iter));
-    loop {
-        let c = iter.next().unwrap();
+    while let Some(c) = iter.next() {
         if c != ',' {
             return (Map::new(points), c);
         }
         points.push(read_point(&mut iter));
     }
+    (Map::new(points), '\0')
 }
 
 fn read_map(mut iter: &mut Peekable<Chars>) -> Map {
@@ -125,7 +120,7 @@ fn read_boosters(mut iter: &mut Peekable<Chars>) -> Vec<Booster> {
             'B' => BoosterType::NewHand,
             'F' => BoosterType::FastMove,
             'L' => BoosterType::Drill,
-            'X' => BoosterType::Unknown,
+            'X' => BoosterType::Spawn,
             'R' => BoosterType::Teleports,
             'C' => BoosterType::Cloning,
             _ => panic!("unknown type {}", c),
@@ -167,4 +162,37 @@ fn find_files(input_root: &str) -> Vec<String> {
                 .to_string()
         })
         .collect::<Vec<String>>()
+}
+
+fn read_puzzle(s: &str) -> Puzzle {
+    let mut iter = s.chars().peekable();
+    let block = read_usize(&mut iter, ',');
+    let epock = read_usize(&mut iter, ',');
+    let max_length = read_usize(&mut iter, ',');
+    let vertex_min = read_usize(&mut iter, ',');
+    let vertex_max = read_usize(&mut iter, ',');
+    let hand_count = read_usize(&mut iter, ',');
+    let fast_count = read_usize(&mut iter, ',');
+    let drill_count = read_usize(&mut iter, ',');
+    let tele_count = read_usize(&mut iter, ',');
+    let clone_count = read_usize(&mut iter, ',');
+    let spawn_count = read_usize(&mut iter, '#');
+    let (includes, c) = read_map_internal(&mut iter);
+    assert!(c == '#');
+    let (excludes, _) = read_map_internal(&mut iter);
+    Puzzle {
+        block,
+        epock,
+        max_length,
+        vertex_min,
+        vertex_max,
+        hand_count,
+        fast_count,
+        drill_count,
+        tele_count,
+        clone_count,
+        spawn_count,
+        includes: includes.0,
+        excludes: excludes.0,
+    }
 }

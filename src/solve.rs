@@ -12,11 +12,13 @@ pub struct State<'a> {
     valid: Matrix<bool>,
     passed: Matrix<bool>,
     booster_map: Matrix<Option<BoosterType>>,
+    remaining_clone: usize,
     bodies_diff: Vec<Point>,
     new_bodies: VecDeque<Point>,
-    remaining: usize,
+    remaining_pass: usize,
     hand_count: usize,
     tele_count: usize,
+    clone_count: usize,
     commands: Vec<Command>,
 }
 
@@ -27,7 +29,8 @@ impl<'a> State<'a> {
         let width = task.width;
         let height = task.height;
 
-        let mut remaining = 0;
+        let mut remaining_pass = 0;
+        let mut remaining_clone = 0;
         let mut booster_map = Matrix::new(width, height, None);
         let mut passed = Matrix::new(width, height, true);
         let mut valid = Matrix::new(width, height, false);
@@ -35,11 +38,18 @@ impl<'a> State<'a> {
         for &p in &map_points {
             passed.set(p, false);
             valid.set(p, true);
-            remaining += 1;
+            remaining_pass += 1;
         }
 
         for b in &task.boosters {
             booster_map.set(b.point, Some(b.kind.clone()));
+            if let BoosterType::Cloning = b.kind {
+                remaining_clone += 1;
+            }
+        }
+
+        if task.boosters.iter().all(|b| b.kind != BoosterType::Spawn) {
+            remaining_clone = 0;
         }
 
         for o in &task.obstacles {
@@ -47,11 +57,10 @@ impl<'a> State<'a> {
                 if let Some(true) = valid.get(p) {
                     valid.set(p, false);
                     passed.set(p, true);
-                    remaining -= 1;
+                    remaining_pass -= 1;
                 }
             }
         }
-
 
         let current_point = task.initial;
 
@@ -71,6 +80,7 @@ impl<'a> State<'a> {
 
         let hand_count = 0;
         let tele_count = 0;
+        let clone_count = 0;
         let commands = Vec::new();
 
         State {
@@ -79,12 +89,48 @@ impl<'a> State<'a> {
             valid,
             passed,
             booster_map,
+            remaining_clone,
             bodies_diff,
             new_bodies,
-            remaining,
+            remaining_pass,
             hand_count,
             tele_count,
+            clone_count,
             commands,
+        }
+    }
+
+    fn is_goal(&self, goal: Point) -> bool {
+        if self.remaining_clone > 0 {
+            match self.booster_map.get(goal) {
+                Some(Some(BoosterType::Cloning)) => true,
+                _ => false,
+            }
+        } else if self.clone_count > 0 && false {
+            // TODO: disabled now
+            match self.booster_map.get(goal) {
+                Some(Some(BoosterType::Spawn)) => true,
+                _ => false,
+            }
+        } else {
+            let not_passed = self.bodies_diff.iter().map(|diff| goal + *diff).any(|p| {
+                match self.passed.get(p) {
+                    Some(false) => true,
+                    _ => false,
+                }
+            });
+
+            let is_booster = match self.booster_map.get(goal) {
+                Some(Some(BoosterType::NewHand)) => true,
+                _ => false,
+            };
+
+            let is_valid = match self.valid.get(goal) {
+                Some(true) => true,
+                _ => false,
+            };
+
+            is_valid && (not_passed || is_booster)
         }
     }
 
@@ -104,26 +150,7 @@ impl<'a> State<'a> {
         while let Some(c) = queue.pop_front() {
             let (_, cost) = data[&c];
 
-            let not_passed =
-                self.bodies_diff
-                    .iter()
-                    .map(|diff| c + *diff)
-                    .any(|p| match self.passed.get(p) {
-                        Some(false) => true,
-                        _ => false,
-                    });
-
-            let is_booster = match self.booster_map.get(c) {
-                Some(Some(BoosterType::NewHand)) => true,
-                _ => false,
-            };
-
-            let is_valid = match self.valid.get(c) {
-                Some(true) => true,
-                _ => false,
-            };
-
-            if is_valid && (not_passed || is_booster) {
+            if self.is_goal(c) {
                 let mut res = Vec::new();
                 let mut iter = c;
                 while iter != start {
@@ -159,17 +186,32 @@ impl<'a> State<'a> {
         for b in bodies {
             if let Some(false) = self.passed.get(b) {
                 self.passed.set(b, true);
-                self.remaining -= 1;
+                self.remaining_pass -= 1;
             }
         }
         if let Some(Some(kind)) = self.booster_map.get(self.current_point) {
             match kind {
-                BoosterType::NewHand => self.hand_count += 1,
-                BoosterType::Teleports => self.tele_count += 1,
-                BoosterType::Drill => {}
-                _ => {}
+                BoosterType::NewHand => {
+                    self.hand_count += 1;
+                    self.booster_map.set(self.current_point, None);
+                }
+                BoosterType::Teleports => {
+                    self.tele_count += 1;
+                    self.booster_map.set(self.current_point, None);
+                }
+                BoosterType::Drill => {
+                    self.booster_map.set(self.current_point, None);
+                }
+                BoosterType::Cloning => {
+                    self.remaining_clone -= 1;
+                    self.clone_count += 1;
+                    self.booster_map.set(self.current_point, None);
+                }
+                BoosterType::Spawn => {}
+                BoosterType::FastMove => {
+                    self.booster_map.set(self.current_point, None);
+                }
             }
-            self.booster_map.set(self.current_point, None);
         }
     }
 
@@ -183,7 +225,7 @@ impl<'a> State<'a> {
         }
 
         self.pass_current_point();
-        if self.remaining == 0 {
+        if self.remaining_pass == 0 {
             return false;
         }
 
@@ -195,13 +237,13 @@ impl<'a> State<'a> {
             self.commands.push(Command::Move(m.clone()));
         }
 
-        self.remaining > 0
+        self.remaining_pass > 0
     }
 }
 
 pub fn solve_small(task: Task) -> Vec<Command> {
-    let times = 5_000_000 / task.width / task.height;
-    (0..times)
+    let times = 5_000_0 / task.width / task.height;
+    (0..std::cmp::max(times, 10))
         .map(|_| {
             let mut state = State::initialize(&task);
             loop {

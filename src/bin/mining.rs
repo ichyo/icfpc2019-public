@@ -1,5 +1,5 @@
 use icfpc::mine::Client;
 
 fn main() {
-    let client = Client::new();
+    let _client = Client::new();
 }
