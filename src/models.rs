@@ -1,6 +1,7 @@
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
+use std::ops::Add;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Point {
@@ -8,13 +9,17 @@ pub struct Point {
     pub y: i32,
 }
 
+impl Add for Point {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Point::new(self.x + other.x, self.y + other.y)
+    }
+}
+
 impl Point {
     pub fn new(x: i32, y: i32) -> Point {
         Point { x, y }
-    }
-
-    pub fn add(self, p: Point) -> Point {
-        Point::new(self.x + p.x, self.y + p.y)
     }
 
     pub fn move_with(self, kind: &Move) -> Point {

@@ -2,6 +2,7 @@ use clap::{App, Arg};
 use rayon::prelude::*;
 use std::fs::File;
 use std::io::Write;
+use indicatif::ProgressBar;
 
 use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
@@ -36,8 +37,8 @@ fn main() {
     let output_root = matches.value_of("output");
 
     let inputs = read_all_inputs(&input_root);
+    let progress_bar = ProgressBar::new(inputs.len() as u64);
     inputs.into_par_iter().for_each(|input| {
-        eprintln!("{}", input.output_file_name());
         let mut output_file: Box<Write> = match output_root {
             Some(output_root) => {
                 let output_path = format!("{}/{}", output_root, input.output_file_name());
@@ -47,5 +48,7 @@ fn main() {
             None => Box::new(std::io::stdout()),
         };
         solve(input.task, &mut output_file);
+        progress_bar.inc(1);
     });
+    progress_bar.finish();
 }

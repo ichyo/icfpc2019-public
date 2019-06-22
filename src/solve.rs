@@ -86,10 +86,7 @@ pub fn solve_small(task: Task) -> Vec<Command> {
                 _ => panic!("no data is expected"),
             };
 
-            let bodies = bodies_diff
-                .iter()
-                .map(|diff| c.add(*diff))
-                .collect::<Vec<_>>();
+            let bodies = bodies_diff.iter().map(|diff| c + *diff).collect::<Vec<_>>();
             let not_passed = bodies.iter().any(|p| {
                 if let Some(false) = passed.get(*p) {
                     true
@@ -117,7 +114,7 @@ pub fn solve_small(task: Task) -> Vec<Command> {
                         }
                         _ => {}
                     }
-                    let (mv, cost) = match data.get(iter) {
+                    let (mv, _cost) = match data.get(iter) {
                         Some(Some((mv, cost))) => (mv, cost),
                         _ => panic!("no data"),
                     };
