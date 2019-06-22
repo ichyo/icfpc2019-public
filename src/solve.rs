@@ -89,6 +89,7 @@ fn update_point(
     passed: &mut Matrix<bool>,
     booster_map: &mut Matrix<Option<BoosterType>>,
     hand_count: &mut usize,
+    tele_count: &mut usize,
     remaining: &mut usize,
 ) {
     bodies_diff.iter().map(|diff| point + *diff).for_each(|b| {
@@ -100,6 +101,7 @@ fn update_point(
     if let Some(Some(kind)) = booster_map.get(point) {
         match kind {
             BoosterType::NewHand => *hand_count += 1,
+            BoosterType::Teleports => *tele_count += 1,
             BoosterType::Drill => {}
             _ => {}
         }
@@ -156,6 +158,8 @@ pub fn solve_small(task: Task) -> Vec<Command> {
     ]);
 
     let mut hand_count = 0;
+    let mut tele_count = 0;
+    let mut tele_points = Vec::new();
 
     while remaining > 0 {
         while hand_count > 0 && !new_bodies.is_empty() {
@@ -164,15 +168,24 @@ pub fn solve_small(task: Task) -> Vec<Command> {
             bodies_diff.push(new_hand);
             res.push(Command::NewHand(new_hand));
         }
+
+        if tele_count > 0 {
+            tele_points.push(current_point);
+            tele_count -= 1;
+            res.push(Command::ResetBeacon);
+        }
+
         update_point(
             current_point,
             &bodies_diff,
             &mut passed,
             &mut booster_map,
             &mut hand_count,
+            &mut tele_count,
             &mut remaining,
         );
-        let moves = find_shortest_path(
+
+        let base_moves = find_shortest_path(
             width,
             height,
             &valid,
@@ -181,6 +194,34 @@ pub fn solve_small(task: Task) -> Vec<Command> {
             &bodies_diff,
             &booster_map,
         );
+
+        let tele_moves = tele_points
+            .iter()
+            .map(|start| {
+                (
+                    start,
+                    find_shortest_path(
+                        width,
+                        height,
+                        &valid,
+                        &passed,
+                        *start,
+                        &bodies_diff,
+                        &booster_map,
+                    ),
+                )
+            })
+            .min_by_key(|(_, v)| v.len());
+
+        let moves = match tele_moves {
+            Some((tele_point, ref tele_moves)) if tele_moves.len() + 1 < base_moves.len() => {
+                res.push(Command::ShiftBeacon(*tele_point));
+                current_point = *tele_point;
+                tele_moves
+            }
+            _ => &base_moves,
+        };
+
         for m in moves {
             current_point = current_point.move_with(&m);
             update_point(
@@ -189,9 +230,10 @@ pub fn solve_small(task: Task) -> Vec<Command> {
                 &mut passed,
                 &mut booster_map,
                 &mut hand_count,
+                &mut tele_count,
                 &mut remaining,
             );
-            res.push(Command::Move(m));
+            res.push(Command::Move(m.clone()));
         }
     }
 

@@ -151,6 +151,8 @@ pub enum Command {
     NewHand(Point),
     FastWheel,
     Drill,
+    ResetBeacon,
+    ShiftBeacon(Point),
 }
 
 impl fmt::Display for Command {
@@ -166,6 +168,8 @@ impl fmt::Display for Command {
             Command::NewHand(p) => write!(f, "B({}, {})", p.x, p.y),
             Command::FastWheel => write!(f, "F"),
             Command::Drill => write!(f, "L"),
+            Command::ResetBeacon => write!(f, "R"),
+            Command::ShiftBeacon(p) => write!(f, "T({}, {})", p.x, p.y)
         }
     }
 }
