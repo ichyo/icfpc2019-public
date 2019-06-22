@@ -1,13 +1,15 @@
 #!/bin/bash
 
-set -eu
+set -e
 
 LOG_FILE=./solution.log
 
 echo "$(date +"%Y-%m-%d %T"): Building main"
 cargo build --release
 
-OUTPUT="./solutions/$(date +"%m%d")/$(date +"%H")/$(date +"%M%S")"
+if [ -z "${OUTPUT}" ]; then
+    OUTPUT="./solutions/$(date +"%m%d")/$(date +"%H")/$(date +"%M%S")"
+fi
 
 echo "$(date +"%Y-%m-%d %T"): Creating $OUTPUT" | tee -a $LOG_FILE
 mkdir -p $OUTPUT
