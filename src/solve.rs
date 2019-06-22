@@ -3,8 +3,7 @@ use crate::utils::Matrix;
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashSet, VecDeque};
+use std::collections::VecDeque;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct State<'a> {
