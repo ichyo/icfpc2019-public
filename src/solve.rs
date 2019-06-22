@@ -59,11 +59,11 @@ pub fn solve_small(task: Task) -> Vec<Command> {
         Point::new(1, -1),
     ];
     let mut new_bodies = VecDeque::from(vec![
+        Point::new(-1, 0),
         Point::new(-1, 1),
         Point::new(-1, -1),
-        Point::new(0, 1),
         Point::new(0, -1),
-        Point::new(-1, 0),
+        Point::new(0, 1),
     ]);
     let mut hand_count = 0;
 
