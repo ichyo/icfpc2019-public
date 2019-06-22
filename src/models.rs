@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::ops::Add;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
@@ -50,7 +50,7 @@ pub enum Direction {
     Horizontal,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Map(Vec<Point>);
 
 impl Map {
@@ -113,7 +113,7 @@ impl Map {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BoosterType {
     NewHand,
     FastMove,
@@ -123,7 +123,7 @@ pub enum BoosterType {
     Unknown,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Booster {
     pub kind: BoosterType,
     pub point: Point,
@@ -135,7 +135,7 @@ impl Booster {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Task {
     pub width: usize,
     pub height: usize,
@@ -145,7 +145,7 @@ pub struct Task {
     pub boosters: Vec<Booster>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Move {
     MoveUp,
     MoveDown,
@@ -154,7 +154,7 @@ pub enum Move {
     Noop,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Command {
     Move(Move),
     TurnRight,

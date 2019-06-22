@@ -1,16 +1,17 @@
 use clap::{App, Arg};
-use rayon::prelude::*;
+use indicatif::ProgressBar;
 use std::fs::File;
 use std::io::Write;
-use indicatif::ProgressBar;
+use rayon::prelude::*;
+
 
 use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
-use icfpc::solve::solve_small;
+use icfpc::solve::solve_beam;
 
 
 fn solve<W: Write>(task: Task, f: &mut W) {
-    let cmds = solve_small(task);
+    let cmds = solve_beam(task);
     for cmd in cmds {
         write!(f, "{}", cmd).unwrap();
     }

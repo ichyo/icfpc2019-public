@@ -1,5 +1,6 @@
 use crate::models::Point;
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Matrix<T> {
     width: usize,
     height: usize,
