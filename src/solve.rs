@@ -66,8 +66,6 @@ pub fn solve_small(task: Task) -> Vec<Command> {
         Point::new(0, 1),
     ]);
     let mut hand_count = 0;
-    let mut fast_wheel_count = 0;
-    let mut fast_wheel_turns = 0;
 
     while remaining > 0 {
         while hand_count > 0 && !new_bodies.is_empty() {
@@ -76,13 +74,8 @@ pub fn solve_small(task: Task) -> Vec<Command> {
             bodies_diff.push(new_hand);
             res.push(Command::NewHand(new_hand));
         }
-        if fast_wheel_count > 0 && fast_wheel_turns == 0 {
-            fast_wheel_count -= 1;
-            res.push(Command::FastWheel);
-            fast_wheel_turns = 50;
-        }
 
-        let mut data: Matrix<Option<(Move, usize)>> = Matrix::new(width, height, None);
+        let mut data: Matrix<Option<(Move, u16)>> = Matrix::new(width, height, None);
         let mut queue = VecDeque::new();
         queue.push_back(cp);
         data.set(cp, Some((Move::Noop, 0)));
@@ -121,7 +114,6 @@ pub fn solve_small(task: Task) -> Vec<Command> {
                         }
                         Some(Some(BoosterType::FastMove)) => {
                             booster_map.set(iter, None);
-                            fast_wheel_count += 1;
                         }
                         _ => {}
                     }
@@ -130,13 +122,9 @@ pub fn solve_small(task: Task) -> Vec<Command> {
                         _ => panic!("no data"),
                     };
                     iter = iter.revert_with(mv);
-                    if *cost - 1 < fast_wheel_turns {
-                        iter = iter.revert_with(mv);
-                    }
                     local_cmds.push(Command::Move(mv.clone()));
                 }
                 local_cmds.reverse();
-                fast_wheel_count -= std::cmp::min(fast_wheel_count, local_cmds.len());
                 res.extend(local_cmds);
 
                 cp = c;
@@ -145,11 +133,7 @@ pub fn solve_small(task: Task) -> Vec<Command> {
             }
             moves.shuffle(&mut rng);
             for m in &moves {
-                let nc = if cost < fast_wheel_turns {
-                    c.move_with(m).move_with(m)
-                } else {
-                    c.move_with(m)
-                };
+                let nc = c.move_with(m);
                 if let Some(None) = data.get(nc) {
                     if let Some(true) = valid.get(nc) {
                         data.set(nc, Some((m.clone(), cost + 1)));
