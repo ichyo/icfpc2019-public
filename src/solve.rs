@@ -15,6 +15,7 @@ pub fn solve_small(task: Task) -> Vec<Command> {
 
     let width = map_points.iter().map(|p| p.x).max().unwrap() as usize + 1;
     let height = map_points.iter().map(|p| p.y).max().unwrap() as usize + 1;
+
     let mut remaining = 0;
     let mut booster_map = Matrix::new(width, height, None);
     let mut passed = Matrix::new(width, height, true);
@@ -66,6 +67,8 @@ pub fn solve_small(task: Task) -> Vec<Command> {
         Point::new(0, 1),
     ]);
     let mut hand_count = 0;
+    let mut drill_count = 0;
+    let mut drill_turns = 0;
 
     while remaining > 0 {
         while hand_count > 0 && !new_bodies.is_empty() {
@@ -94,7 +97,11 @@ pub fn solve_small(task: Task) -> Vec<Command> {
                     false
                 }
             });
-            if not_passed {
+            let is_booster = match booster_map.get(c) {
+                Some(Some(BoosterType::NewHand)) => !new_bodies.is_empty(),
+                _ => false,
+            };
+            if not_passed || is_booster {
                 for body in bodies {
                     if let Some(false) = passed.try_set(body, true) {
                         remaining -= 1;
@@ -106,14 +113,16 @@ pub fn solve_small(task: Task) -> Vec<Command> {
                 while iter != cp {
                     match booster_map.get(iter) {
                         Some(Some(BoosterType::NewHand)) => {
-                            booster_map.set(iter, None);
                             hand_count += 1;
                         }
-                        Some(Some(BoosterType::FastMove)) => {
-                            booster_map.set(iter, None);
+                        Some(Some(BoosterType::FastMove)) => {}
+                        Some(Some(BoosterType::Drill)) => {
+                            drill_count += 1;
                         }
                         _ => {}
                     }
+                    booster_map.set(iter, None);
+
                     let (mv, _cost) = match data.get(iter) {
                         Some(Some((mv, cost))) => (mv, cost),
                         _ => panic!("no data"),
