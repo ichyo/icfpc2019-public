@@ -9,3 +9,7 @@ clap = "2.33.0"
 glob = "0.3.0"
 rand = "0.6.5"
 rayon = "1.1.0"
+
+[lib]
+name = "icfpc"
+path = "src/lib.rs"
