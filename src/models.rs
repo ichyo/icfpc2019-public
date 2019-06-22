@@ -17,24 +17,24 @@ impl Point {
         Point::new(self.x + p.x, self.y + p.y)
     }
 
-    pub fn move_with(&self, command: Command) -> Point {
+    pub fn move_with(&self, kind: &Move) -> Point {
         let (x, y) = (self.x, self.y);
-        match command {
-            Command::MoveUp => Point::new(x, y + 1),
-            Command::MoveDown => Point::new(x, y - 1),
-            Command::MoveRight => Point::new(x + 1, y),
-            Command::MoveLeft => Point::new(x - 1, y),
+        match kind {
+            Move::MoveUp => Point::new(x, y + 1),
+            Move::MoveDown => Point::new(x, y - 1),
+            Move::MoveRight => Point::new(x + 1, y),
+            Move::MoveLeft => Point::new(x - 1, y),
             _ => *self,
         }
     }
 
-    pub fn revert_with(&self, command: Command) -> Point {
+    pub fn revert_with(&self, kind: &Move) -> Point {
         let (x, y) = (self.x, self.y);
-        match command {
-            Command::MoveUp => Point::new(x, y - 1),
-            Command::MoveDown => Point::new(x, y + 1),
-            Command::MoveRight => Point::new(x - 1, y),
-            Command::MoveLeft => Point::new(x + 1, y),
+        match kind {
+            Move::MoveUp => Point::new(x, y - 1),
+            Move::MoveDown => Point::new(x, y + 1),
+            Move::MoveRight => Point::new(x - 1, y),
+            Move::MoveLeft => Point::new(x + 1, y),
             _ => unreachable!(),
         }
     }
@@ -99,7 +99,7 @@ impl Map {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum BoosterType {
     NewHand,
     FastMove,
@@ -109,7 +109,7 @@ pub enum BoosterType {
     Unknown,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Booster {
     pub kind: BoosterType,
     pub point: Point,
@@ -129,13 +129,18 @@ pub struct Task {
     pub boosters: Vec<Booster>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Command {
+#[derive(Debug, Clone)]
+pub enum Move {
     MoveUp,
     MoveDown,
     MoveLeft,
     MoveRight,
-    Noop,
+    Noop
+}
+
+#[derive(Debug, Clone)]
+pub enum Command {
+    Move(Move),
     TurnRight,
     TurnLeft,
     NewHand(Point),
@@ -144,11 +149,11 @@ pub enum Command {
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Command::MoveUp => write!(f, "W"),
-            Command::MoveDown => write!(f, "S"),
-            Command::MoveLeft => write!(f, "A"),
-            Command::MoveRight => write!(f, "D"),
-            Command::Noop => write!(f, "Z"),
+            Command::Move(Move::MoveUp) => write!(f, "W"),
+            Command::Move(Move::MoveDown) => write!(f, "S"),
+            Command::Move(Move::MoveLeft) => write!(f, "A"),
+            Command::Move(Move::MoveRight) => write!(f, "D"),
+            Command::Move(Move::Noop) => write!(f, "Z"),
             Command::TurnRight => write!(f, "E"),
             Command::TurnLeft => write!(f, "Q"),
             Command::NewHand(p) => write!(f, "B({}, {})", p.x, p.y),

@@ -6,7 +6,7 @@ pub struct Matrix<T> {
     inner: Vec<T>,
 }
 
-impl<T: Copy> Matrix<T> {
+impl<T: Clone> Matrix<T> {
     pub fn new(width: usize, height: usize, init: T) -> Matrix<T> {
         let n = width * height;
         Matrix {
@@ -16,9 +16,9 @@ impl<T: Copy> Matrix<T> {
         }
     }
 
-    pub fn get(&self, p: Point) -> Option<T> {
+    pub fn get(&self, p: Point) -> Option<&T> {
         if p.x >= 0 && p.y >= 0 && (p.x as usize) < self.width && (p.y as usize) < self.height {
-            Some(self.inner[p.y as usize * self.width + p.x as usize])
+            Some(&self.inner[p.y as usize * self.width + p.x as usize])
         } else {
             None
         }
@@ -34,9 +34,7 @@ impl<T: Copy> Matrix<T> {
 
     pub fn try_set(&mut self, p: Point, value: T) -> Option<T> {
         if let Some(r) = self.get_mut(p) {
-            let old = *r;
-            *r = value;
-            Some(old)
+            Some(std::mem::replace(r, value))
         } else {
             None
         }
