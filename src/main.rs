@@ -1,14 +1,12 @@
 use clap::{App, Arg};
 use indicatif::ProgressBar;
+use rayon::prelude::*;
 use std::fs::File;
 use std::io::Write;
-use rayon::prelude::*;
-
 
 use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
 use icfpc::solve::solve_small;
-
 
 fn solve<W: Write>(task: Task, f: &mut W) {
     let cmds = solve_small(task);
@@ -40,7 +38,7 @@ fn main() {
     let inputs = read_all_inputs(&input_root);
     let progress_bar = ProgressBar::new(inputs.len() as u64);
     inputs.into_par_iter().for_each(|input| {
-        let mut output_file: Box<Write> = match output_root {
+        let mut output_file: Box<dyn Write> = match output_root {
             Some(output_root) => {
                 let output_path = format!("{}/{}", output_root, input.output_file_name());
                 let output_file = File::create(&output_path).unwrap();
