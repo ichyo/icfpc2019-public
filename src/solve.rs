@@ -16,7 +16,6 @@ pub struct State<'a> {
     remaining: usize,
     hand_count: usize,
     tele_count: usize,
-    tele_points: Vec<Point>,
     commands: Vec<Command>,
 }
 
@@ -71,7 +70,6 @@ impl<'a> State<'a> {
 
         let hand_count = 0;
         let tele_count = 0;
-        let tele_points = Vec::new();
         let commands = Vec::new();
 
         State {
@@ -85,7 +83,6 @@ impl<'a> State<'a> {
             remaining,
             hand_count,
             tele_count,
-            tele_points,
             commands,
         }
     }
@@ -193,32 +190,11 @@ impl<'a> State<'a> {
             self.commands.push(Command::NewHand(new_hand));
         }
 
-        if self.tele_count > 0 {
-            self.tele_points.push(self.current_point);
-            self.tele_count -= 1;
-            self.commands.push(Command::ResetBeacon);
-        }
-
         self.pass_current_point();
 
         let base_moves = self.find_shortest_path(self.current_point);
 
-        let tele_moves = self
-            .tele_points
-            .iter()
-            .map(|start| (start, self.find_shortest_path(*start)))
-            .min_by_key(|(_, v)| v.len());
-
-        let moves = match tele_moves {
-            Some((tele_point, ref tele_moves)) if tele_moves.len() + 1 < base_moves.len() => {
-                self.commands.push(Command::ShiftBeacon(*tele_point));
-                self.current_point = *tele_point;
-                tele_moves
-            }
-            _ => &base_moves,
-        };
-
-        for m in moves {
+        for m in base_moves {
             self.current_point = self.current_point.move_with(&m);
             self.pass_current_point();
             self.commands.push(Command::Move(m.clone()));
