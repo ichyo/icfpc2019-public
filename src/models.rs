@@ -150,6 +150,7 @@ pub enum Command {
     TurnLeft,
     NewHand(Point),
     FastWheel,
+    Drill,
 }
 
 impl fmt::Display for Command {
@@ -164,6 +165,7 @@ impl fmt::Display for Command {
             Command::TurnLeft => write!(f, "Q"),
             Command::NewHand(p) => write!(f, "B({}, {})", p.x, p.y),
             Command::FastWheel => write!(f, "F"),
+            Command::Drill => write!(f, "L"),
         }
     }
 }

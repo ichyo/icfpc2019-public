@@ -17,6 +17,7 @@ fn find_shortest_path(
     start: Point,
     bodies_diff: &[Point],
     booster_map: &Matrix<Option<BoosterType>>,
+    drill_mode: bool,
 ) -> Vec<Move> {
     let mut rng = thread_rng();
     let mut moves = [
@@ -43,13 +44,18 @@ fn find_shortest_path(
                 Some(false) => true,
                 _ => false,
             });
+
         let is_booster = match booster_map.get(c) {
-            Some(Some(BoosterType::NewHand)) => true,
-            Some(Some(BoosterType::Drill)) => true,
+            Some(Some(_)) => true,
             _ => false,
         };
 
-        if not_passed || is_booster {
+        let is_valid = match valid.get(c) {
+            Some(true) => true,
+            _ => false,
+        };
+
+        if is_valid && (not_passed || is_booster) {
             let mut res = Vec::new();
             let mut iter = c;
             while iter != start {
@@ -68,9 +74,12 @@ fn find_shortest_path(
         for m in &moves {
             let nc = c.move_with(m);
             if let Some(None) = data.get(nc) {
-                if let Some(true) = valid.get(nc) {
-                    data.set(nc, Some((m.clone(), cost + 1)));
-                    queue.push_back(nc);
+                match (valid.get(nc), drill_mode) {
+                    (Some(true), _) | (Some(false), true) => {
+                        data.set(nc, Some((m.clone(), cost + 1)));
+                        queue.push_back(nc);
+                    }
+                    _ => {}
                 }
             }
         }
@@ -153,7 +162,6 @@ pub fn solve_small(task: Task) -> Vec<Command> {
 
     let mut hand_count = 0;
     let mut drill_count = 0;
-    let mut drill_turns = 0;
 
     while remaining > 0 {
         while hand_count > 0 && !new_bodies.is_empty() {
@@ -161,10 +169,6 @@ pub fn solve_small(task: Task) -> Vec<Command> {
             hand_count -= 1;
             bodies_diff.push(new_hand);
             res.push(Command::NewHand(new_hand));
-        }
-        if drill_count > 0 && drill_turns == 0 {
-            drill_count -= 1;
-            drill_turns = 30;
         }
         update_point(
             current_point,
@@ -183,7 +187,32 @@ pub fn solve_small(task: Task) -> Vec<Command> {
             current_point,
             &bodies_diff,
             &booster_map,
+            false,
         );
+        let moves = if drill_count > 0 {
+            let drill_moves = find_shortest_path(
+                width,
+                height,
+                &valid,
+                &passed,
+                current_point,
+                &bodies_diff,
+                &booster_map,
+                true,
+            );
+            if drill_moves.len() * 2 <= moves.len()
+                && drill_moves.len() >= 10
+                && drill_moves.len() < 30
+            {
+                drill_count -= 1;
+                res.push(Command::Drill);
+                drill_moves
+            } else {
+                moves
+            }
+        } else {
+            moves
+        };
         for m in moves {
             current_point = current_point.move_with(&m);
             update_point(
