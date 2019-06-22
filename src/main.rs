@@ -134,6 +134,7 @@ enum BoosterType {
     NewHand,
     FastMove,
     Drill,
+    Teleports,
     Unknown,
 }
 
@@ -171,27 +172,27 @@ fn skip_or_empty(iter: &mut Peekable<Chars>, expected: char) {
 
 fn read_point(iter: &mut Peekable<Chars>) -> Point {
     skip(iter, '(');
-    let mut x = 0;
+    let mut x = 0usize;
     loop {
         let c = iter.next().unwrap();
         if c.is_digit(10) {
-            x = x * 10 + (c as u8 - '0' as u8);
+            x = x * 10 + (c as u8 - '0' as u8) as usize;
         } else {
             assert!(c == ',');
             break;
         }
     }
-    let mut y = 0;
+    let mut y = 0usize;
     loop {
         let c = iter.next().unwrap();
         if c.is_digit(10) {
-            y = y * 10 + (c as u8 - '0' as u8);
+            y = y * 10 + (c as u8 - '0' as u8) as usize;
         } else {
             assert!(c == ')');
             break;
         }
     }
-    Point::new(x as usize, y as usize)
+    Point::new(x, y)
 }
 
 fn read_map_internal(mut iter: &mut Peekable<Chars>) -> (Map, char) {
@@ -244,6 +245,7 @@ fn read_boosters(mut iter: &mut Peekable<Chars>) -> Vec<Booster> {
             'F' => BoosterType::FastMove,
             'L' => BoosterType::Drill,
             'X' => BoosterType::Unknown,
+            'R' => BoosterType::Teleports,
             _ => panic!("unknown type {}", c),
         };
         let point = read_point(&mut iter);
@@ -310,6 +312,7 @@ fn solve_small(input: Input) -> Vec<Command> {
         let mut queue = VecDeque::new();
         queue.push_back(cp);
         data[cp.y][cp.x] = Some(Command::Noop);
+        let mut reached = false;
         while let Some(c) = queue.pop_front() {
             if !passed[c.y][c.x] {
                 passed[c.y][c.x] = true;
@@ -326,9 +329,9 @@ fn solve_small(input: Input) -> Vec<Command> {
                 res.extend(local_cmds);
 
                 cp = c;
+                reached = true;
                 break;
             }
-            let mut rng = thread_rng();
             moves.shuffle(&mut rng);
             for m in &moves {
                 if let Some(nc) = c.move_with(*m) {
@@ -342,6 +345,9 @@ fn solve_small(input: Input) -> Vec<Command> {
                     }
                 }
             }
+        }
+        if !reached {
+            panic!("cannot reach anywhere: remaining {}", remaining);
         }
     }
 

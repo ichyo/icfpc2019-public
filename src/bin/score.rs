@@ -57,6 +57,7 @@ enum BoosterType {
     NewHand,
     FastMove,
     Drill,
+    Teleports,
     Unknown,
 }
 
@@ -223,6 +224,7 @@ fn read_boosters(mut iter: &mut Peekable<Chars>) -> Vec<Booster> {
             'F' => BoosterType::FastMove,
             'L' => BoosterType::Drill,
             'X' => BoosterType::Unknown,
+            'R' => BoosterType::Teleports,
             _ => panic!("unknown type {}", c),
         };
         let point = read_point(&mut iter);
