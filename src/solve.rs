@@ -204,15 +204,6 @@ impl<'a> State<'a> {
 
         self.remaining > 0
     }
-
-    pub fn finished(&self) -> bool {
-        self.remaining == 0
-    }
-
-    // min is better
-    fn score(&self) -> usize {
-        self.remaining
-    }
 }
 
 pub fn solve_small(task: Task) -> Vec<Command> {
@@ -223,48 +214,4 @@ pub fn solve_small(task: Task) -> Vec<Command> {
         }
     }
     state.commands
-}
-
-#[derive(Clone, Eq, PartialEq)]
-struct BeamEntry<'a>(State<'a>);
-
-impl<'a> Ord for BeamEntry<'a> {
-    fn cmp(&self, other: &BeamEntry) -> Ordering {
-        let cmd = other.0.commands.len().cmp(&self.0.commands.len());
-        let score = other.0.score().cmp(&self.0.score());
-        cmd.then(score)
-    }
-}
-
-impl<'a> PartialOrd for BeamEntry<'a> {
-    fn partial_cmp(&self, other: &BeamEntry) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-pub fn solve_beam(task: Task) -> Vec<Command> {
-    let mut beam = BinaryHeap::new();
-    let beam_length = 3;
-    let branch = 3;
-    beam.push(BeamEntry(State::initialize(&task)));
-    loop {
-        let mut next_beam = BinaryHeap::new();
-        let mut points_set = HashSet::new();
-        for entry in beam.into_iter().take(beam_length) {
-            let state = entry.0;
-            if state.finished() {
-                return state.commands;
-            }
-            for _ in 0..branch {
-                let mut state = state.clone();
-                state.next_state();
-                if points_set.contains(&state.current_point) {
-                    continue;
-                }
-                points_set.insert(state.current_point);
-                next_beam.push(BeamEntry(state));
-            }
-        }
-        beam = next_beam;
-    }
 }

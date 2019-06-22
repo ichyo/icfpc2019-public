@@ -7,11 +7,11 @@ use rayon::prelude::*;
 
 use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
-use icfpc::solve::solve_beam;
+use icfpc::solve::solve_small;
 
 
 fn solve<W: Write>(task: Task, f: &mut W) {
-    let cmds = solve_beam(task);
+    let cmds = solve_small(task);
     for cmd in cmds {
         write!(f, "{}", cmd).unwrap();
     }
