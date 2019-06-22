@@ -2,9 +2,8 @@ use crate::models::*;
 use glob::glob;
 use std::fs::File;
 use std::io::Read;
-use std::str::Chars;
 use std::iter::Peekable;
-
+use std::str::Chars;
 
 pub struct Input {
     pub id: String,
@@ -127,6 +126,7 @@ fn read_boosters(mut iter: &mut Peekable<Chars>) -> Vec<Booster> {
             'L' => BoosterType::Drill,
             'X' => BoosterType::Unknown,
             'R' => BoosterType::Teleports,
+            'C' => BoosterType::Cloning,
             _ => panic!("unknown type {}", c),
         };
         let point = read_point(&mut iter);

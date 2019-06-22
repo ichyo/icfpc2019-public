@@ -1,5 +1,5 @@
 use std::cmp;
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -113,6 +113,7 @@ pub enum BoosterType {
     FastMove,
     Drill,
     Teleports,
+    Cloning,
     Unknown,
 }
 
