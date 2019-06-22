@@ -13,6 +13,10 @@ impl Point {
         Point { x, y }
     }
 
+    pub fn add(&self, p: &Point) -> Point {
+        Point::new(self.x + p.x, self.y + p.y)
+    }
+
     pub fn move_with(&self, command: Command) -> Point {
         let (x, y) = (self.x, self.y);
         match command {

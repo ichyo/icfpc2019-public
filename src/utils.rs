@@ -16,7 +16,7 @@ impl<T: Copy> Matrix<T> {
         }
     }
 
-    pub fn get(&self, p: &Point) -> Option<T> {
+    pub fn get(&self, p: Point) -> Option<T> {
         if p.x >= 0 && p.y >= 0 && (p.x as usize) < self.width && (p.y as usize) < self.height {
             Some(self.inner[p.y as usize * self.width + p.x as usize])
         } else {
@@ -24,7 +24,7 @@ impl<T: Copy> Matrix<T> {
         }
     }
 
-    pub fn get_mut(&mut self, p: &Point) -> Option<&mut T> {
+    pub fn get_mut(&mut self, p: Point) -> Option<&mut T> {
         if p.x >= 0 && p.y >= 0 && (p.x as usize) < self.width && (p.y as usize) < self.height {
             Some(&mut self.inner[p.y as usize * self.width + p.x as usize])
         } else {
@@ -32,7 +32,17 @@ impl<T: Copy> Matrix<T> {
         }
     }
 
-    pub fn set(&mut self, p: &Point, value: T) {
+    pub fn try_set(&mut self, p: Point, value: T) -> Option<T> {
+        if let Some(r) = self.get_mut(p) {
+            let old = *r;
+            *r = value;
+            Some(old)
+        } else {
+            None
+        }
+    }
+
+    pub fn set(&mut self, p: Point, value: T) {
         if let Some(r) = self.get_mut(p) {
             *r = value;
         } else {

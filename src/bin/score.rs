@@ -46,14 +46,14 @@ fn score_small(task: Task, output_len: usize) -> ScoreInfo {
     let mut passed = Matrix::new(width as usize, height as usize, true);
     let mut valid = Matrix::new(width as usize, height as usize, false);
 
-    for p in &map_points {
+    for &p in &map_points {
         passed.set(p, false);
         valid.set(p, true);
         remaining += 1;
     }
 
     for o in &task.obstacles {
-        for p in o.enumerate_points().iter() {
+        for &p in o.enumerate_points().iter() {
             if let Some(true) = valid.get(p) {
                 valid.set(p, false);
                 passed.set(p, true);
