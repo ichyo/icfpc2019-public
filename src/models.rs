@@ -4,45 +4,33 @@ use std::fmt;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Point {
-    pub x: usize,
-    pub y: usize,
+    pub x: i32,
+    pub y: i32,
 }
 
 impl Point {
-    pub fn new(x: usize, y: usize) -> Point {
+    pub fn new(x: i32, y: i32) -> Point {
         Point { x, y }
     }
 
-    pub fn move_with(&self, command: Command) -> Option<Point> {
+    pub fn move_with(&self, command: Command) -> Point {
         let (x, y) = (self.x, self.y);
         match command {
-            Command::MoveUp => Some(Point::new(x, y + 1)),
-            Command::MoveDown => match self.y {
-                0 => None,
-                _ => Some(Point::new(x, y - 1)),
-            },
-            Command::MoveRight => Some(Point::new(x + 1, y)),
-            Command::MoveLeft => match self.x {
-                0 => None,
-                _ => Some(Point::new(x - 1, y)),
-            },
-            _ => Some(*self),
+            Command::MoveUp => Point::new(x, y + 1),
+            Command::MoveDown => Point::new(x, y - 1),
+            Command::MoveRight => Point::new(x + 1, y),
+            Command::MoveLeft => Point::new(x - 1, y),
+            _ => *self,
         }
     }
 
-    pub fn revert_with(&self, command: Command) -> Option<Point> {
+    pub fn revert_with(&self, command: Command) -> Point {
         let (x, y) = (self.x, self.y);
         match command {
-            Command::MoveDown => Some(Point::new(x, y + 1)),
-            Command::MoveUp => match self.y {
-                0 => None,
-                _ => Some(Point::new(x, y - 1)),
-            },
-            Command::MoveLeft => Some(Point::new(x + 1, y)),
-            Command::MoveRight => match self.x {
-                0 => None,
-                _ => Some(Point::new(x - 1, y)),
-            },
+            Command::MoveUp => Point::new(x, y - 1),
+            Command::MoveDown => Point::new(x, y + 1),
+            Command::MoveRight => Point::new(x - 1, y),
+            Command::MoveLeft => Point::new(x + 1, y),
             _ => unreachable!(),
         }
     }

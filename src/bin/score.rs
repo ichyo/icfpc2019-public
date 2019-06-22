@@ -1,6 +1,7 @@
 use clap::{App, Arg};
 use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
+use icfpc::utils::Matrix;
 use std::fs::File;
 use std::io::Read;
 
@@ -42,28 +43,28 @@ fn score_small(task: Task, output_len: usize) -> ScoreInfo {
     let width = map_points.iter().map(|p| p.x).max().unwrap() + 1;
     let height = map_points.iter().map(|p| p.y).max().unwrap() + 1;
     let mut remaining = 0;
-    let mut passed = vec![vec![true; width]; height];
-    let mut valid = vec![vec![false; width]; height];
+    let mut passed = Matrix::new(width as usize, height as usize, true);
+    let mut valid = Matrix::new(width as usize, height as usize, false);
 
     for p in &map_points {
-        passed[p.y][p.x] = false;
-        valid[p.y][p.x] = true;
+        passed.set(p, false);
+        valid.set(p, true);
         remaining += 1;
     }
 
     for o in &task.obstacles {
         for p in o.enumerate_points().iter() {
-            if p.y < height && p.x < width && valid[p.y][p.x] {
-                valid[p.y][p.x] = false;
-                passed[p.y][p.x] = true;
+            if let Some(true) = valid.get(p) {
+                valid.set(p, false);
+                passed.set(p, true);
                 remaining -= 1;
             }
         }
     }
 
     ScoreInfo {
-        width,
-        height,
+        width: width as usize,
+        height: height as usize,
         best_estimated: remaining * 3 / 5,
         team_time: output_len,
     }

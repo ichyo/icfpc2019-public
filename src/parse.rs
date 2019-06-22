@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::Read;
 use std::iter::Peekable;
 use std::str::Chars;
+use std::convert::TryFrom;
 
 pub struct Input {
     pub id: String,
@@ -72,7 +73,7 @@ fn read_point(iter: &mut Peekable<Chars>) -> Point {
             break;
         }
     }
-    Point::new(x, y)
+    Point::new(i32::try_from(x).unwrap(), i32::try_from(y).unwrap())
 }
 
 fn read_map_internal(mut iter: &mut Peekable<Chars>) -> (Map, char) {
