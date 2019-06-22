@@ -147,7 +147,6 @@ impl<'a> State<'a> {
             }
         }
         panic!("cannot reach anywhere");
-
     }
 
     fn pass_current_point(&mut self) {
@@ -184,6 +183,9 @@ impl<'a> State<'a> {
         }
 
         self.pass_current_point();
+        if self.remaining == 0 {
+            return false;
+        }
 
         let base_moves = self.find_shortest_path(self.current_point);
 
@@ -198,11 +200,17 @@ impl<'a> State<'a> {
 }
 
 pub fn solve_small(task: Task) -> Vec<Command> {
-    let mut state = State::initialize(&task);
-    loop {
-        if !state.next_state() {
-            break;
-        }
-    }
-    state.commands
+    let times = 5_000_000 / task.width / task.height;
+    (0..times)
+        .map(|_| {
+            let mut state = State::initialize(&task);
+            loop {
+                if !state.next_state() {
+                    break;
+                }
+            }
+            state.commands
+        })
+        .min_by_key(|c| c.len())
+        .unwrap()
 }
