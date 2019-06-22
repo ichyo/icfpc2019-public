@@ -13,22 +13,22 @@ impl Point {
         Point { x, y }
     }
 
-    pub fn add(&self, p: &Point) -> Point {
+    pub fn add(self, p: Point) -> Point {
         Point::new(self.x + p.x, self.y + p.y)
     }
 
-    pub fn move_with(&self, kind: &Move) -> Point {
+    pub fn move_with(self, kind: &Move) -> Point {
         let (x, y) = (self.x, self.y);
         match kind {
             Move::MoveUp => Point::new(x, y + 1),
             Move::MoveDown => Point::new(x, y - 1),
             Move::MoveRight => Point::new(x + 1, y),
             Move::MoveLeft => Point::new(x - 1, y),
-            _ => *self,
+            _ => self,
         }
     }
 
-    pub fn revert_with(&self, kind: &Move) -> Point {
+    pub fn revert_with(self, kind: &Move) -> Point {
         let (x, y) = (self.x, self.y);
         match kind {
             Move::MoveUp => Point::new(x, y - 1),
@@ -78,7 +78,7 @@ impl Map {
                 let min_x = cmp::min(p.x, q.x);
                 let max_x = cmp::max(p.x, q.x);
                 for x in min_x..max_x {
-                    cross_y_map.entry(x).or_insert_with(|| Vec::new()).push(p.y);
+                    cross_y_map.entry(x).or_insert_with(Vec::new).push(p.y);
                 }
             }
         }
@@ -135,7 +135,7 @@ pub enum Move {
     MoveDown,
     MoveLeft,
     MoveRight,
-    Noop
+    Noop,
 }
 
 #[derive(Debug, Clone)]
@@ -144,6 +144,7 @@ pub enum Command {
     TurnRight,
     TurnLeft,
     NewHand(Point),
+    FastWheel,
 }
 
 impl fmt::Display for Command {
@@ -157,6 +158,7 @@ impl fmt::Display for Command {
             Command::TurnRight => write!(f, "E"),
             Command::TurnLeft => write!(f, "Q"),
             Command::NewHand(p) => write!(f, "B({}, {})", p.x, p.y),
+            Command::FastWheel => write!(f, "F"),
         }
     }
 }

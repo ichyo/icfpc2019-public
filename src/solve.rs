@@ -66,6 +66,8 @@ pub fn solve_small(task: Task) -> Vec<Command> {
         Point::new(0, 1),
     ]);
     let mut hand_count = 0;
+    let mut fast_wheel_count = 0;
+    let mut fast_wheel_turns = 0;
 
     while remaining > 0 {
         while hand_count > 0 && !new_bodies.is_empty() {
@@ -74,16 +76,26 @@ pub fn solve_small(task: Task) -> Vec<Command> {
             bodies_diff.push(new_hand);
             res.push(Command::NewHand(new_hand));
         }
+        if fast_wheel_count > 0 && fast_wheel_turns == 0 {
+            fast_wheel_count -= 1;
+            res.push(Command::FastWheel);
+            fast_wheel_turns = 50;
+        }
 
-        let mut data: Matrix<Option<Move>> = Matrix::new(width, height, None);
+        let mut data: Matrix<Option<(Move, usize)>> = Matrix::new(width, height, None);
         let mut queue = VecDeque::new();
         queue.push_back(cp);
-        data.set(cp, Some(Move::Noop));
+        data.set(cp, Some((Move::Noop, 0)));
         let mut reached = false;
         while let Some(c) = queue.pop_front() {
+            let cost = match data.get(c) {
+                Some(Some((_, cost))) => *cost,
+                _ => panic!("no data is expected"),
+            };
+
             let bodies = bodies_diff
                 .iter()
-                .map(|diff| c.add(diff))
+                .map(|diff| c.add(*diff))
                 .collect::<Vec<_>>();
             let not_passed = bodies.iter().any(|p| {
                 if let Some(false) = passed.get(*p) {
@@ -102,18 +114,29 @@ pub fn solve_small(task: Task) -> Vec<Command> {
                 let mut local_cmds = Vec::new();
                 let mut iter = c;
                 while iter != cp {
-                    if let Some(Some(BoosterType::NewHand)) = booster_map.get(iter) {
-                        booster_map.set(iter, None);
-                        hand_count += 1;
+                    match booster_map.get(iter) {
+                        Some(Some(BoosterType::NewHand)) => {
+                            booster_map.set(iter, None);
+                            hand_count += 1;
+                        }
+                        Some(Some(BoosterType::FastMove)) => {
+                            booster_map.set(iter, None);
+                            fast_wheel_count += 1;
+                        }
+                        _ => {}
                     }
-                    if let Some(Some(mv)) = data.get(iter) {
+                    let (mv, cost) = match data.get(iter) {
+                        Some(Some((mv, cost))) => (mv, cost),
+                        _ => panic!("no data"),
+                    };
+                    iter = iter.revert_with(mv);
+                    if *cost - 1 < fast_wheel_turns {
                         iter = iter.revert_with(mv);
-                        local_cmds.push(Command::Move(mv.clone()));
-                    } else {
-                        panic!("cannot revert command");
                     }
+                    local_cmds.push(Command::Move(mv.clone()));
                 }
                 local_cmds.reverse();
+                fast_wheel_count -= std::cmp::min(fast_wheel_count, local_cmds.len());
                 res.extend(local_cmds);
 
                 cp = c;
@@ -122,10 +145,14 @@ pub fn solve_small(task: Task) -> Vec<Command> {
             }
             moves.shuffle(&mut rng);
             for m in &moves {
-                let nc = c.move_with(m);
+                let nc = if cost < fast_wheel_turns {
+                    c.move_with(m).move_with(m)
+                } else {
+                    c.move_with(m)
+                };
                 if let Some(None) = data.get(nc) {
                     if let Some(true) = valid.get(nc) {
-                        data.set(nc, Some(m.clone()));
+                        data.set(nc, Some((m.clone(), cost + 1)));
                         queue.push_back(nc);
                     }
                 }
