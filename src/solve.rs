@@ -16,6 +16,7 @@ pub fn solve_small(task: Task) -> Vec<Command> {
     let width = map_points.iter().map(|p| p.x).max().unwrap() as usize + 1;
     let height = map_points.iter().map(|p| p.y).max().unwrap() as usize + 1;
     let mut remaining = 0;
+    let mut booster_map = Matrix::new(width, height, None);
     let mut passed = Matrix::new(width, height, true);
     let mut valid = Matrix::new(width, height, false);
 
@@ -23,6 +24,10 @@ pub fn solve_small(task: Task) -> Vec<Command> {
         passed.set(p, false);
         valid.set(p, true);
         remaining += 1;
+    }
+
+    for &b in &task.boosters {
+        booster_map.set(b.point, Some(b.kind));
     }
 
     for o in &task.obstacles {
@@ -47,13 +52,29 @@ pub fn solve_small(task: Task) -> Vec<Command> {
         passed.set(cp, true);
         remaining -= 1;
     }
-    let bodies_diff = vec![
+    let mut bodies_diff = vec![
         Point::new(0, 0),
         Point::new(1, 1),
         Point::new(1, 0),
         Point::new(1, -1),
     ];
+    let mut new_bodies = VecDeque::from(vec![
+        Point::new(-1, 1),
+        Point::new(-1, -1),
+        Point::new(0, 1),
+        Point::new(0, -1),
+        Point::new(-1, 0),
+    ]);
+    let mut hand_count = 0;
+
     while remaining > 0 {
+        while hand_count > 0 && !new_bodies.is_empty() {
+            let new_hand = new_bodies.pop_front().unwrap();
+            hand_count -= 1;
+            //bodies_diff.push(new_hand);
+            res.push(Command::NewHand(new_hand));
+        }
+
         let mut data = Matrix::new(width, height, None);
         let mut queue = VecDeque::new();
         queue.push_back(cp);
@@ -81,6 +102,12 @@ pub fn solve_small(task: Task) -> Vec<Command> {
                 let mut local_cmds = Vec::new();
                 let mut iter = c;
                 while iter != cp {
+                    /*
+                    if let Some(Some(BoosterType::NewHand)) = booster_map.get(iter) {
+                        booster_map.set(iter, None);
+                        hand_count += 1;
+                    }
+                    */
                     let cmd = data.get(iter).unwrap().unwrap();
                     local_cmds.push(cmd);
                     iter = iter.revert_with(cmd);

@@ -1,6 +1,6 @@
 use crate::models::Point;
 
-pub struct Matrix<T: Copy> {
+pub struct Matrix<T> {
     width: usize,
     height: usize,
     inner: Vec<T>,

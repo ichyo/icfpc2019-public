@@ -99,7 +99,7 @@ impl Map {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum BoosterType {
     NewHand,
     FastMove,
@@ -109,7 +109,17 @@ pub enum BoosterType {
     Unknown,
 }
 
-pub type Booster = (BoosterType, Point);
+#[derive(Debug, Clone, Copy)]
+pub struct Booster {
+    pub kind: BoosterType,
+    pub point: Point,
+}
+
+impl Booster {
+    pub fn new(kind: BoosterType, point: Point) -> Booster {
+        Booster { kind, point }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Task {
@@ -128,6 +138,7 @@ pub enum Command {
     Noop,
     TurnRight,
     TurnLeft,
+    NewHand(Point),
 }
 
 impl fmt::Display for Command {
@@ -140,6 +151,7 @@ impl fmt::Display for Command {
             Command::Noop => write!(f, "Z"),
             Command::TurnRight => write!(f, "E"),
             Command::TurnLeft => write!(f, "Q"),
+            Command::NewHand(p) => write!(f, "B({}, {})", p.x, p.y),
         }
     }
 }

@@ -131,7 +131,7 @@ fn read_boosters(mut iter: &mut Peekable<Chars>) -> Vec<Booster> {
             _ => panic!("unknown type {}", c),
         };
         let point = read_point(&mut iter);
-        res.push((booster_type, point));
+        res.push(Booster::new(booster_type, point));
         skip_or_empty(&mut iter, ';');
     }
     res
