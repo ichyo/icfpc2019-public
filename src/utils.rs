@@ -81,4 +81,10 @@ impl Range {
         let right = Range::new(mid + 1, self.end);
         (left, right)
     }
+    pub fn remove_begin(&self) -> Range {
+        Range::new(self.start+1, self.end)
+    }
+    pub fn remove_end(&self) -> Range {
+        Range::new(self.start, self.end - 1)
+    }
 }

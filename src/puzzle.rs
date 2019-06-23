@@ -1,28 +1,75 @@
 use crate::models::*;
 use crate::utils::Range;
 use rand::prelude::*;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 fn construct_map_from_ranges(ranges: &[Range]) -> Map {
     let len = ranges.len();
     let mut vertexes = Vec::new();
-    vertexes.push(Point::new(0, ranges[0].start as i32));
-    vertexes.push(Point::new(0, ranges[0].end as i32));
+    vertexes.push(Point::new(ranges[0].start as i32, 0));
+    vertexes.push(Point::new(ranges[0].end as i32, 0));
     for y in 0..len - 1 {
         if ranges[y].end != ranges[y + 1].end {
-            vertexes.push(Point::new((y + 1) as i32, ranges[y].end as i32));
-            vertexes.push(Point::new((y + 1) as i32, ranges[y + 1].end as i32));
+            vertexes.push(Point::new(ranges[y].end as i32, (y + 1) as i32));
+            vertexes.push(Point::new(ranges[y + 1].end as i32, (y + 1) as i32));
         }
     }
-    vertexes.push(Point::new(len as i32, ranges[len - 1].end as i32));
-    vertexes.push(Point::new(len as i32, ranges[len - 1].start as i32));
+    vertexes.push(Point::new(ranges[len - 1].end as i32, len as i32));
+    vertexes.push(Point::new(ranges[len - 1].start as i32, len as i32));
     for y in (0..len - 1).rev() {
         if ranges[y].start != ranges[y + 1].start {
-            vertexes.push(Point::new((y + 1) as i32, ranges[y + 1].start as i32));
-            vertexes.push(Point::new((y + 1) as i32, ranges[y].start as i32));
+            vertexes.push(Point::new(ranges[y + 1].start as i32, (y + 1) as i32));
+            vertexes.push(Point::new(ranges[y].start as i32, (y + 1) as i32));
         }
     }
     Map::new(vertexes)
+}
+
+fn compute_vertex_number(ranges: &[Range]) -> usize {
+    construct_map_from_ranges(ranges).len()
+}
+
+fn increse_vertex_number(ranges: &mut [Range], includes: Vec<Point>, min_vertex: usize) -> bool {
+    let mut vertex_num = compute_vertex_number(ranges);
+    let includes = includes.iter().cloned().collect::<HashSet<_>>();
+    for i in 1..ranges.len() - 1 {
+        if vertex_num >= min_vertex + 10 {
+            break;
+        }
+        if ranges[i].end == ranges[i - 1].end
+            && ranges[i].len() > 1
+            && !includes.contains(&Point::new(ranges[i].end as i32 - 1, i as i32))
+        {
+            let new_range = ranges[i].remove_end();
+            if new_range.intersect(ranges[i - 1]) && new_range.intersect(ranges[i + 1]) {
+                ranges[i] = new_range;
+                vertex_num += 2;
+                if ranges[i - 1].end == ranges[i + 1].end {
+                    vertex_num += 2;
+                }
+                if new_range.end == ranges[i + 1].end {
+                    vertex_num -= 2;
+                }
+            }
+        }
+        if ranges[i].start == ranges[i - 1].start
+            && ranges[i].len() > 1
+            && !includes.contains(&Point::new(ranges[i].start as i32, i as i32))
+        {
+            let new_range = ranges[i].remove_begin();
+            if new_range.intersect(ranges[i - 1]) && new_range.intersect(ranges[i + 1]) {
+                ranges[i] = new_range;
+                vertex_num += 2;
+                if ranges[i - 1].start == ranges[i + 1].start {
+                    vertex_num += 2;
+                }
+                if new_range.start == ranges[i + 1].start {
+                    vertex_num -= 2;
+                }
+            }
+        }
+    }
+    vertex_num >= min_vertex
 }
 
 fn consume_points_for(source: &mut VecDeque<Point>, num: usize, kind: BoosterType) -> Vec<Booster> {
@@ -33,7 +80,7 @@ fn consume_points_for(source: &mut VecDeque<Point>, num: usize, kind: BoosterTyp
     res
 }
 
-pub fn solve_pazzle(puzzle: Puzzle) -> Option<Task> {
+pub fn solve_puzzle(puzzle: Puzzle) -> Option<Task> {
     let len = puzzle.max_length - 1;
     assert!(puzzle.includes.iter().all(|p| p.x < len as i32));
     assert!(puzzle.includes.iter().all(|p| p.y < len as i32));
@@ -108,6 +155,11 @@ pub fn solve_pazzle(puzzle: Puzzle) -> Option<Task> {
         ranges.push(cur_r);
     }
     ranges.reverse();
+
+    if !increse_vertex_number(&mut ranges, puzzle.includes, puzzle.vertex_min) {
+        eprintln!("Failed to increase vertex");
+        return None;
+    }
 
     let map = construct_map_from_ranges(&ranges);
 

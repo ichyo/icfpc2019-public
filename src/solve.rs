@@ -1,6 +1,7 @@
 use crate::models::*;
 use crate::utils::Matrix;
 
+use std::time;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::{HashMap, VecDeque};
@@ -249,4 +250,19 @@ pub fn solve_small(task: Task) -> Vec<Command> {
         }
     }
     state.commands
+}
+
+pub fn solve_small_while(task: Task, duration: time::Duration) -> Vec<Command> {
+    let mut res = solve_small(task.clone());
+    let now = time::Instant::now();;
+    loop {
+        if now.elapsed() >= duration {
+            break;
+        }
+        let new = solve_small(task.clone());
+        if new.len() < res.len() {
+            res = new;
+        }
+    }
+    res
 }

@@ -6,10 +6,10 @@ use std::io::Write;
 
 use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
-use icfpc::solve::solve_small;
+use icfpc::solve::solve_small_while;
 
 fn solve<W: Write>(task: Task, f: &mut W) {
-    let cmds = solve_small(task);
+    let cmds = solve_small_while(task, std::time::Duration::from_secs(2));
     for cmd in cmds {
         write!(f, "{}", cmd).unwrap();
     }

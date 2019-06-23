@@ -7,8 +7,8 @@ use std::{thread, time};
 
 use crate::models::*;
 use crate::parse::{read_puzzle, read_task};
-use crate::puzzle::solve_pazzle;
-use crate::solve::solve_small;
+use crate::puzzle::solve_puzzle;
+use crate::solve::solve_small_while;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlockChainInfo {
@@ -58,36 +58,89 @@ impl Client {
         Client { api: client }
     }
 
-    pub fn solve(&self, block: usize, puzzle: &str, task: &str) {
-        let mut rand = thread_rng();
-        let puzzle = read_puzzle(puzzle);
-        eprintln!("{:?}", puzzle);
-        let task = read_task(task);
-        //let commands = solve_small(task);
+    pub fn latest_block(&mut self) -> Option<usize> {
+        match self.api.getmininginfo().call() {
+            Ok(m) => Some(m.block),
+            Err(e) => {
+                eprintln!("{}", e);
+                None
+            }
+        }
+    }
 
-        let puzzle_answer = solve_pazzle(puzzle);
-        println!("{:?}", puzzle_answer);
+    pub fn submit_latest(&mut self) {
+        if let Some(block) = self.latest_block() {
+            if self.generate_solution(block) {
+                match self
+                    .api
+                    .submit(
+                        block,
+                        &format!("./mining/{}-task.sol", block),
+                        &format!("./mining/{}-puzzle.desc", block),
+                    )
+                    .call()
+                {
+                    Ok(value) => eprintln!("{:?}", value),
+                    Err(e) => eprintln!("{}", e),
+                }
+            }
+        }
+    }
+
+    pub fn generate_solution(&mut self, block: usize) -> bool {
+        let blockinfo = match self.api.getblockinfo(block).call() {
+            Ok(m) => m,
+            Err(e) => {
+                eprintln!("{}", e);
+                return false;
+            }
+        };
+
+        let puzzle = read_puzzle(&blockinfo.puzzle);
+        let task = read_task(&blockinfo.task);
+        let task_answer = solve_small_while(task, std::time::Duration::from_secs(180));
+        let puzzle_answer = solve_puzzle(puzzle);
+
+        self.dump_task_answer(block, task_answer);
+        if let Some(puzzle_answer) = puzzle_answer {
+            self.dump_puzzle_answer(block, puzzle_answer);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn dump_task_answer(&self, block: usize, answer: Vec<Command>) {
+        let mut content = String::new();
+        for b in answer {
+            content.push_str(&format!("{}", b));
+        }
+        match self.dump_file(&format!("./mining/{}-task.sol", block), &content) {
+            Ok(()) => {}
+            Err(e) => {
+                eprintln!("{}", e);
+            }
+        }
+    }
+
+    fn dump_puzzle_answer(&self, block: usize, answer: Task) {
+        let content = format!("{}", answer);
+        match self.dump_file(&format!("./mining/{}-puzzle.desc", block), &content) {
+            Ok(()) => {}
+            Err(e) => {
+                eprintln!("{}", e);
+            }
+        }
+    }
+
+    fn dump_file(&self, path: &str, content: &str) -> std::io::Result<()> {
+        std::fs::write(path, content)
     }
 
     pub fn execute(&mut self) {
         loop {
-            match self.api.getmininginfo().call() {
-                Ok(x) => {
-                    for b in 0..x.block {
-                        let b = self.api.getblockinfo(b).call().unwrap();
-                        let puzzle = read_puzzle(&b.puzzle);
-                        let puzzle_answer = solve_pazzle(puzzle);
-                        println!("{:?}", puzzle_answer);
-                    }
-                    self.solve(x.block, &x.puzzle, &x.task);
-                }
-                Err(e) => {
-                    println!("{}", e);
-                }
-            }
-
-            let one_sec = time::Duration::from_secs(60);
-            thread::sleep(one_sec);
+            self.submit_latest();
+            thread::sleep(time::Duration::from_secs(60));
         }
     }
 }
