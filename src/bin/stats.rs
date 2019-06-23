@@ -6,7 +6,7 @@ fn main() {
     let team_id = 42;
     let latest_block = client.latest_block().unwrap();
     let mut last_balances = HashMap::new();
-    for b in 33..=latest_block {
+    for b in latest_block - 10..=latest_block {
         let info = client.get_block_info(b).unwrap();
         let mut increses = Vec::new();
         let my_last = last_balances.get(&team_id).unwrap_or(&0);
