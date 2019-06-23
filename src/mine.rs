@@ -1,5 +1,6 @@
 use jsonrpc_client_http::{HttpHandle, HttpTransport};
 use serde::{Deserialize, Serialize};
+use log::info;
 use serde_json::Value;
 
 
@@ -10,6 +11,7 @@ use crate::solve::solve_small_while;
 use chrono::prelude::*;
 use std::collections::HashMap;
 use std::{thread, time};
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlockChainInfo {
     pub block: usize,
@@ -95,7 +97,7 @@ impl Client {
             if block == self.last_block {
                 return;
             }
-            eprintln!("Start {}", block);
+            info!("Start {}", block);
             self.last_block = block;
             if self.generate_solution(block) {
                 match self
@@ -125,8 +127,11 @@ impl Client {
 
         let puzzle = read_puzzle(&blockinfo.puzzle);
         let task = read_task(&blockinfo.task);
-        let task_answer = solve_small_while(task, std::time::Duration::from_secs(300));
+        info!("solving puzzle");
         let puzzle_answer = solve_puzzle(puzzle);
+        info!("solving task");
+        let task_answer = solve_small_while(task, std::time::Duration::from_secs(300));
+        info!("dumping");
 
         self.dump_task_answer(block, task_answer);
         if let Some(puzzle_answer) = puzzle_answer {
