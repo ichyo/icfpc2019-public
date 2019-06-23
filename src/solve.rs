@@ -79,6 +79,7 @@ impl Robot {
     fn consume_new_hand(&mut self) -> Option<Point> {
         self.new_bodies.pop_front()
     }
+
     fn bodies(&self) -> Vec<Point> {
         self.bodies_diff
             .iter()
@@ -167,6 +168,15 @@ impl<'a> State<'a> {
             clone_count,
             robots,
         }
+    }
+
+    fn commands(&self) -> Commands {
+        Commands::new(
+            self.robots
+                .iter()
+                .map(|r| r.executed.clone())
+                .collect::<Vec<_>>(),
+        )
     }
 
     fn is_goal(&self, robot_idx: usize, goal: Point) -> bool {
@@ -383,6 +393,10 @@ impl<'a> State<'a> {
 
     // true if it continues
     pub fn next_state(&mut self) -> bool {
+        if self.remaining_pass == 0 {
+            return false;
+        }
+
         let turn = self.turn;
         let robots_len = self.robots.len();
         for idx in 0..robots_len {
@@ -441,11 +455,5 @@ pub fn solve_small(task: Task) -> Commands {
             break;
         }
     }
-    Commands::new(
-        state
-            .robots
-            .into_iter()
-            .map(|r| r.executed)
-            .collect::<Vec<_>>(),
-    )
+    state.commands()
 }

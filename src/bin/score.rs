@@ -103,8 +103,18 @@ fn main() {
             output_file.read_to_string(&mut output_str).unwrap();
             read_commands(&output_str)
         };
+        let has_x = if input
+            .task
+            .boosters
+            .iter()
+            .any(|b| b.kind == BoosterType::Spawn)
+        {
+            "(X)"
+        } else {
+            ""
+        };
         let score_info = score_small(input.task, commands);
-        eprintln!("{}: {}", input.id, score_info.debug());
+        eprintln!("{}{}: {}", input.id, has_x, score_info.debug());
         sum_scores += score_info.score();
     }
     println!("output: {}", output_root);
