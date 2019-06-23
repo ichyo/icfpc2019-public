@@ -1,34 +1,44 @@
 use jsonrpc_client_http::{HttpHandle, HttpTransport};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{thread, time};
+
 
 use crate::models::*;
 use crate::parse::{read_puzzle, read_task};
 use crate::puzzle::solve_puzzle;
 use crate::solve::solve_small_while;
-
+use chrono::prelude::*;
+use std::collections::HashMap;
+use std::{thread, time};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlockChainInfo {
-    block: usize,
-    block_subs: usize,
-    block_ts: f64,
-    total_subs: usize,
+    pub block: usize,
+    pub block_subs: usize,
+    pub block_ts: f64,
+    pub total_subs: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MiningInfo {
-    block: usize,
+    pub block: usize,
     //excluded: Vec<usize>,
-    puzzle: String,
-    task: String,
+    pub puzzle: String,
+    pub task: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlockInfo {
-    block: usize,
-    puzzle: String,
-    task: String,
+    pub block: usize,
+    pub block_ts: f64,
+    pub puzzle: String,
+    pub task: String,
+    pub balances: HashMap<usize, usize>,
+}
+
+impl BlockInfo {
+    pub fn time(&self) -> DateTime<Local> {
+        Local.timestamp(self.block_ts as i64, 0)
+    }
 }
 
 jsonrpc_client!(pub struct LambdaClient {
@@ -40,6 +50,7 @@ jsonrpc_client!(pub struct LambdaClient {
 
 pub struct Client {
     api: LambdaClient<HttpHandle>,
+    last_block: usize,
 }
 
 impl Default for Client {
@@ -53,7 +64,10 @@ impl Client {
         let transport = HttpTransport::new().standalone().unwrap();
         let transport_handle = transport.handle("http://localhost:8332").unwrap();
         let client = LambdaClient::new(transport_handle);
-        Client { api: client }
+        Client {
+            api: client,
+            last_block: 0,
+        }
     }
 
     pub fn latest_block(&mut self) -> Option<usize> {
@@ -66,8 +80,23 @@ impl Client {
         }
     }
 
+    pub fn get_block_info(&mut self, bucket: usize) -> Option<BlockInfo> {
+        match self.api.getblockinfo(bucket).call() {
+            Ok(m) => Some(m),
+            Err(e) => {
+                eprintln!("{}", e);
+                None
+            }
+        }
+    }
+
     pub fn submit_latest(&mut self) {
         if let Some(block) = self.latest_block() {
+            if block == self.last_block {
+                return;
+            }
+            eprintln!("Start {}", block);
+            self.last_block = block;
             if self.generate_solution(block) {
                 match self
                     .api
@@ -96,7 +125,7 @@ impl Client {
 
         let puzzle = read_puzzle(&blockinfo.puzzle);
         let task = read_task(&blockinfo.task);
-        let task_answer = solve_small_while(task, std::time::Duration::from_secs(180));
+        let task_answer = solve_small_while(task, std::time::Duration::from_secs(300));
         let puzzle_answer = solve_puzzle(puzzle);
 
         self.dump_task_answer(block, task_answer);
@@ -135,7 +164,7 @@ impl Client {
     pub fn execute(&mut self) {
         loop {
             self.submit_latest();
-            thread::sleep(time::Duration::from_secs(60));
+            thread::sleep(time::Duration::from_secs(10));
         }
     }
 }
