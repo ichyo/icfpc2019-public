@@ -26,11 +26,13 @@ impl Robot {
             Point::new(1, -1),
         ];
         let new_bodies = VecDeque::from(vec![
-            Point::new(-1, 0),
-            Point::new(-1, 1),
-            Point::new(-1, -1),
-            //Point::new(0, -1),
-            //Point::new(0, 1),
+            Point::new(2, 0),
+            Point::new(3, 0),
+            Point::new(4, 0),
+            Point::new(5, 0),
+            Point::new(6, 0),
+            Point::new(7, 0),
+            Point::new(8, 0),
         ]);
 
         let commands = robot.commands.clone();
@@ -55,6 +57,7 @@ impl Robot {
             Point::new(1, 0),
             Point::new(1, -1),
         ];
+
         let new_bodies = VecDeque::from(vec![
             Point::new(2, 0),
             Point::new(3, 0),
@@ -68,13 +71,6 @@ impl Robot {
             Point::new(11, 0),
             Point::new(12, 0),
             Point::new(13, 0),
-            /*
-            Point::new(-1, 0),
-            Point::new(-1, 1),
-            Point::new(-1, -1),
-            Point::new(0, -1),
-            Point::new(0, 1),
-            */
         ]);
 
         let commands = Vec::new();
@@ -187,9 +183,8 @@ impl<'a> State<'a> {
         )
     }
 
-    fn hand_reach(&self, robot_idx: usize, diff: Point) -> bool {
+    fn hand_reach(&self, place: Place, diff: Point) -> Option<Point> {
         if diff.x.abs() > 1 || diff.y.abs() > 1 {
-            let place = self.robots[robot_idx].current_place;
             let d = std::cmp::max(diff.x.abs(), diff.y.abs());
             assert!(diff.x.abs() == 0 || diff.x.abs() == d);
             assert!(diff.y.abs() == 0 || diff.y.abs() == d);
@@ -199,11 +194,11 @@ impl<'a> State<'a> {
                 let hand = place.hand(diff);
                 if let Some(true) = self.valid.get(hand) {
                 } else {
-                    return false;
+                    return None;
                 }
             }
         }
-        true
+        Some(place.hand(diff))
     }
 
     fn is_goal(&self, robot_idx: usize, goal: Place) -> bool {
@@ -241,8 +236,7 @@ impl<'a> State<'a> {
             .bodies_diff
             .iter()
             .cloned()
-            .filter(|diff| self.hand_reach(robot_idx, *diff))
-            .map(|diff| goal.hand(diff))
+            .filter_map(|diff| self.hand_reach(goal, diff))
             .any(|p| match self.passed.get(p) {
                 Some(false) => true,
                 _ => false,
@@ -266,8 +260,7 @@ impl<'a> State<'a> {
             .bodies_diff
             .iter()
             .cloned()
-            .filter(|diff| self.hand_reach(robot_idx, *diff))
-            .map(|diff| place.hand(diff))
+            .filter_map(|diff| self.hand_reach(place, diff))
             .filter(|p| match self.passed.get(*p) {
                 Some(false) => true,
                 _ => false,
@@ -347,8 +340,7 @@ impl<'a> State<'a> {
         let bodies = self.robots[robot_idx]
             .bodies_diff
             .iter()
-            .filter(|&&diff| self.hand_reach(robot_idx, diff))
-            .map(|&diff| self.robots[robot_idx].current_place.hand(diff))
+            .filter_map(|diff| self.hand_reach(self.robots[robot_idx].current_place, *diff))
             .collect::<Vec<_>>();
 
         let current_point = self.robots[robot_idx].current_place.point();
