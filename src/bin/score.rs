@@ -5,6 +5,7 @@ use icfpc::parse::read_commands;
 use icfpc::utils::Matrix;
 use std::fs::File;
 use std::io::Read;
+use std::collections::HashMap;
 
 struct ScoreInfo {
     width: usize,
@@ -103,18 +104,20 @@ fn main() {
             output_file.read_to_string(&mut output_str).unwrap();
             read_commands(&output_str)
         };
-        let has_x = if input
-            .task
-            .boosters
-            .iter()
-            .any(|b| b.kind == BoosterType::Spawn)
-        {
-            "(X)"
-        } else {
-            ""
-        };
+        let mut counter = HashMap::new();
+        for b in &input.task.boosters {
+            *counter.entry(b.kind.clone()).or_insert(0) += 1;
+        }
+        let count_info = format!("B:{} F:{} L:{} X:{} R:{} C:{}",
+            counter.get(&BoosterType::NewHand).unwrap_or(&0),
+            counter.get(&BoosterType::FastMove).unwrap_or(&0),
+            counter.get(&BoosterType::Drill).unwrap_or(&0),
+            counter.get(&BoosterType::Spawn).unwrap_or(&0),
+            counter.get(&BoosterType::Teleports).unwrap_or(&0),
+            counter.get(&BoosterType::Cloning).unwrap_or(&0),
+         );
         let score_info = score_small(input.task, commands);
-        eprintln!("{}{}: {}", input.id, has_x, score_info.debug());
+        eprintln!("{}: {} ({})", input.id, score_info.debug(), count_info);
         sum_scores += score_info.score();
     }
     println!("output: {}", output_root);

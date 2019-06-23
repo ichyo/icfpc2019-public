@@ -143,7 +143,7 @@ impl Map {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum BoosterType {
     NewHand,
     FastMove,
