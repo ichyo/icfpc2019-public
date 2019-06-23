@@ -96,6 +96,7 @@ pub struct State<'a> {
     valid: Matrix<bool>,
     passed: Matrix<bool>,
     booster_map: Matrix<Option<BoosterType>>,
+    remaining_hand: usize,
     remaining_clone: usize,
     remaining_pass: usize,
     hand_count: usize,
@@ -112,6 +113,7 @@ impl<'a> State<'a> {
         let height = task.height;
 
         let mut remaining_pass = 0;
+        let mut remaining_hand = 0;
         let mut remaining_clone = 0;
         let mut booster_map = Matrix::new(width, height, None);
         let mut passed = Matrix::new(width, height, true);
@@ -125,8 +127,10 @@ impl<'a> State<'a> {
 
         for b in &task.boosters {
             booster_map.set(b.point, Some(b.kind.clone()));
-            if let BoosterType::Cloning = b.kind {
-                remaining_clone += 1;
+            match b.kind {
+                BoosterType::Cloning => remaining_clone += 1,
+                BoosterType::NewHand => remaining_hand += 1,
+                _ => {}
             }
         }
 
@@ -156,6 +160,7 @@ impl<'a> State<'a> {
             valid,
             passed,
             booster_map,
+            remaining_hand,
             remaining_clone,
             remaining_pass,
             hand_count,
@@ -167,37 +172,50 @@ impl<'a> State<'a> {
 
     fn is_goal(&self, robot_idx: usize, goal: Point) -> bool {
         if self.remaining_clone > 0 {
-            match self.booster_map.get(goal) {
+            return match self.booster_map.get(goal) {
                 Some(Some(BoosterType::Cloning)) => true,
                 _ => false,
-            }
-        } else if self.clone_count > 0 {
-            match self.booster_map.get(goal) {
+            };
+        }
+
+        if self.clone_count > 0 {
+            return match self.booster_map.get(goal) {
                 Some(Some(BoosterType::Spawn)) => true,
                 _ => false,
-            }
-        } else {
-            let not_passed = self.robots[robot_idx]
-                .bodies_diff
-                .iter()
-                .map(|diff| goal + *diff)
-                .any(|p| match self.passed.get(p) {
-                    Some(false) => true,
-                    _ => false,
-                });
-
-            let is_booster = match self.booster_map.get(goal) {
-                Some(Some(BoosterType::NewHand)) => true,
-                _ => false,
             };
-
-            let is_valid = match self.valid.get(goal) {
-                Some(true) => true,
-                _ => false,
-            };
-
-            is_valid && (not_passed || is_booster)
         }
+
+        if self.remaining_hand > 0 {
+            if let Some((first_robot_index, _)) = self.robots.iter().enumerate().find(|(_, r)| !r.new_bodies.is_empty()) {
+                if robot_idx == first_robot_index {
+                    return match self.booster_map.get(goal) {
+                        Some(Some(BoosterType::NewHand)) => true,
+                        _ => false,
+                    };
+                }
+            }
+        }
+
+        let not_passed = self.robots[robot_idx]
+            .bodies_diff
+            .iter()
+            .map(|diff| goal + *diff)
+            .any(|p| match self.passed.get(p) {
+                Some(false) => true,
+                _ => false,
+            });
+
+        let is_booster = match self.booster_map.get(goal) {
+            Some(Some(BoosterType::NewHand)) => true,
+            _ => false,
+        };
+
+        let is_valid = match self.valid.get(goal) {
+            Some(true) => true,
+            _ => false,
+        };
+
+        is_valid && (not_passed || is_booster)
     }
 
     fn find_shortest_path(&self, robot_idx: usize, start: Point) -> Option<Vec<Move>> {
@@ -255,6 +273,7 @@ impl<'a> State<'a> {
         if let Some(Some(kind)) = self.booster_map.get(current_point) {
             match kind {
                 BoosterType::NewHand => {
+                    self.remaining_hand -= 1;
                     self.hand_count += 1;
                     self.booster_map.set(current_point, None);
                 }
