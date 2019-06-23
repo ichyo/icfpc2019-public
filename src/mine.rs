@@ -1,6 +1,7 @@
 use jsonrpc_client_http::{HttpHandle, HttpTransport};
-use serde::{Deserialize, Serialize};
+
 use log::info;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 
@@ -68,7 +69,7 @@ impl Client {
         let client = LambdaClient::new(transport_handle);
         Client {
             api: client,
-            last_block: 0,
+            last_block: 56,
         }
     }
 
