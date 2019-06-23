@@ -1,26 +1,76 @@
 use crate::models::*;
 use crate::utils::Matrix;
 
-use std::time;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::{HashMap, VecDeque};
+use std::time::Duration;
+use std::time::Instant;
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct Robot {
+    current_point: Point,
+    bodies_diff: Vec<Point>,
+    new_bodies: VecDeque<Point>,
+    commands: Vec<Command>,
+}
+
+impl Robot {
+    fn initialize(task: &Task) -> Robot {
+        let current_point = task.initial;
+
+        let bodies_diff = vec![
+            Point::new(0, 0),
+            Point::new(1, 1),
+            Point::new(1, 0),
+            Point::new(1, -1),
+        ];
+        let new_bodies = VecDeque::from(vec![
+            Point::new(-1, 0),
+            Point::new(-1, 1),
+            Point::new(-1, -1),
+            Point::new(0, -1),
+            Point::new(0, 1),
+        ]);
+
+        let commands = Vec::new();
+        Robot {
+            current_point,
+            bodies_diff,
+            new_bodies,
+            commands,
+        }
+    }
+
+    fn move_with(&mut self, m: &Move) {
+        self.current_point = self.current_point.move_with(m);
+    }
+
+    fn consume_new_hand(&mut self) -> Option<Point> {
+        self.new_bodies.pop_front()
+    }
+    fn bodies(&self) -> Vec<Point> {
+        self.bodies_diff
+            .iter()
+            .cloned()
+            .map(|diff| self.current_point + diff)
+            .collect::<Vec<_>>()
+    }
+}
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct State<'a> {
     task: &'a Task,
-    current_point: Point,
+    turn: usize,
     valid: Matrix<bool>,
     passed: Matrix<bool>,
     booster_map: Matrix<Option<BoosterType>>,
     remaining_clone: usize,
-    bodies_diff: Vec<Point>,
-    new_bodies: VecDeque<Point>,
     remaining_pass: usize,
     hand_count: usize,
     tele_count: usize,
     clone_count: usize,
-    commands: Vec<Command>,
+    robots: Vec<Robot>,
 }
 
 impl<'a> State<'a> {
@@ -63,63 +113,49 @@ impl<'a> State<'a> {
             }
         }
 
-        let current_point = task.initial;
-
-        let bodies_diff = vec![
-            Point::new(0, 0),
-            Point::new(1, 1),
-            Point::new(1, 0),
-            Point::new(1, -1),
-        ];
-        let new_bodies = VecDeque::from(vec![
-            Point::new(-1, 0),
-            Point::new(-1, 1),
-            Point::new(-1, -1),
-            Point::new(0, -1),
-            Point::new(0, 1),
-        ]);
-
+        let turn = 0;
         let hand_count = 0;
         let tele_count = 0;
         let clone_count = 0;
-        let commands = Vec::new();
+        let robots = vec![Robot::initialize(task)];
 
         State {
             task,
-            current_point,
+            turn,
             valid,
             passed,
             booster_map,
             remaining_clone,
-            bodies_diff,
-            new_bodies,
             remaining_pass,
             hand_count,
             tele_count,
             clone_count,
-            commands,
+            robots,
         }
     }
 
-    fn is_goal(&self, goal: Point) -> bool {
+    fn is_goal(&self, robot_idx: usize, goal: Point) -> bool {
         if self.remaining_clone > 0 {
             match self.booster_map.get(goal) {
                 Some(Some(BoosterType::Cloning)) => true,
                 _ => false,
             }
-        } else if self.clone_count > 0 && false {
+        //} else if self.clone_count > 0 {
+        } else if self.clone_count == usize::max_value() {
             // TODO: disabled now
             match self.booster_map.get(goal) {
                 Some(Some(BoosterType::Spawn)) => true,
                 _ => false,
             }
         } else {
-            let not_passed = self.bodies_diff.iter().map(|diff| goal + *diff).any(|p| {
-                match self.passed.get(p) {
+            let not_passed = self.robots[robot_idx]
+                .bodies_diff
+                .iter()
+                .map(|diff| goal + *diff)
+                .any(|p| match self.passed.get(p) {
                     Some(false) => true,
                     _ => false,
-                }
-            });
+                });
 
             let is_booster = match self.booster_map.get(goal) {
                 Some(Some(BoosterType::NewHand)) => true,
@@ -135,7 +171,7 @@ impl<'a> State<'a> {
         }
     }
 
-    fn find_shortest_path(&self, start: Point) -> Vec<Move> {
+    fn find_shortest_path(&self, robot_idx: usize, start: Point) -> Vec<Move> {
         let mut rng = thread_rng();
         let mut moves = [
             Move::MoveUp,
@@ -151,7 +187,7 @@ impl<'a> State<'a> {
         while let Some(c) = queue.pop_front() {
             let (_, cost) = data[&c];
 
-            if self.is_goal(c) {
+            if self.is_goal(robot_idx, c) {
                 let mut res = Vec::new();
                 let mut iter = c;
                 while iter != start {
@@ -177,84 +213,96 @@ impl<'a> State<'a> {
         panic!("cannot reach anywhere");
     }
 
-    fn pass_current_point(&mut self) {
-        let bodies = self
-            .bodies_diff
-            .iter()
-            .cloned()
-            .map(|diff| self.current_point + diff)
-            .collect::<Vec<_>>();
+    fn pass_current_point(&mut self, robot_idx: usize) {
+        let bodies = self.robots[robot_idx].bodies();
+        let current_point = self.robots[robot_idx].current_point;
         for b in bodies {
             if let Some(false) = self.passed.get(b) {
                 self.passed.set(b, true);
                 self.remaining_pass -= 1;
             }
         }
-        if let Some(Some(kind)) = self.booster_map.get(self.current_point) {
+        if let Some(Some(kind)) = self.booster_map.get(current_point) {
             match kind {
                 BoosterType::NewHand => {
                     self.hand_count += 1;
-                    self.booster_map.set(self.current_point, None);
+                    self.booster_map.set(current_point, None);
                 }
                 BoosterType::Teleports => {
                     self.tele_count += 1;
-                    self.booster_map.set(self.current_point, None);
+                    self.booster_map.set(current_point, None);
                 }
                 BoosterType::Drill => {
-                    self.booster_map.set(self.current_point, None);
+                    self.booster_map.set(current_point, None);
                 }
                 BoosterType::Cloning => {
                     self.remaining_clone -= 1;
                     self.clone_count += 1;
-                    self.booster_map.set(self.current_point, None);
+                    self.booster_map.set(current_point, None);
                 }
                 BoosterType::Spawn => {}
                 BoosterType::FastMove => {
-                    self.booster_map.set(self.current_point, None);
+                    self.booster_map.set(current_point, None);
                 }
             }
         }
     }
 
+    pub fn fill_next_command(&mut self, robot_idx: usize) {
+        if self.hand_count > 0 {
+            let robot = &mut self.robots[robot_idx];
+            if let Some(new_hand) = robot.consume_new_hand() {
+                self.hand_count -= 1;
+                robot.commands.push(Command::NewHand(new_hand));
+                return;
+            }
+        }
+
+        let current_point = self.robots[robot_idx].current_point;
+        let base_moves = self.find_shortest_path(robot_idx, current_point);
+        for m in base_moves {
+            self.robots[robot_idx]
+                .commands
+                .push(Command::Move(m.clone()));
+        }
+    }
+
     // true if it continues
     pub fn next_state(&mut self) -> bool {
-        self.pass_current_point();
-        if self.remaining_pass == 0 {
-            return false;
+        let turn = self.turn;
+        let robots_len = self.robots.len();
+        for idx in 0..robots_len {
+            self.pass_current_point(idx);
+
+            if self.remaining_pass == 0 {
+                return false;
+            }
+
+            if turn >= self.robots[idx].commands.len() {
+                self.fill_next_command(idx);
+            }
+
+            let m = self.robots[idx].commands[turn].clone();
+            match m {
+                Command::Move(m) => {
+                    self.robots[idx].move_with(&m);
+                }
+                Command::NewHand(p) => {
+                    self.robots[idx].bodies_diff.push(p);
+                }
+                _ => unreachable!(),
+            }
         }
 
-        while self.hand_count > 0 && !self.new_bodies.is_empty() {
-            let new_hand = self.new_bodies.pop_front().unwrap();
-            self.hand_count -= 1;
-            self.bodies_diff.push(new_hand);
-            self.commands.push(Command::NewHand(new_hand));
-        }
-
-        let base_moves = self.find_shortest_path(self.current_point);
-
-        for m in base_moves {
-            self.current_point = self.current_point.move_with(&m);
-            self.pass_current_point();
-            self.commands.push(Command::Move(m.clone()));
-        }
+        self.turn += 1;
 
         self.remaining_pass > 0
     }
 }
 
-pub fn solve_small(task: Task) -> Vec<Command> {
-    let mut state = State::initialize(&task);
-    loop {
-        if !state.next_state() {
-            break;
-        }
-    }
-    state.commands
-}
-
-pub fn solve_small_while(task: Task, duration: time::Duration) -> Vec<Command> {
+pub fn solve_small_while(task: Task, duration: Duration) -> Commands {
     let mut res = solve_small(task.clone());
-    let now = time::Instant::now();;
+    let now = Instant::now();;
     loop {
         if now.elapsed() >= duration {
             break;
@@ -265,4 +313,20 @@ pub fn solve_small_while(task: Task, duration: time::Duration) -> Vec<Command> {
         }
     }
     res
+}
+
+pub fn solve_small(task: Task) -> Commands {
+    let mut state = State::initialize(&task);
+    loop {
+        if !state.next_state() {
+            break;
+        }
+    }
+    Commands::new(
+        state
+            .robots
+            .into_iter()
+            .map(|r| r.commands)
+            .collect::<Vec<_>>(),
+    )
 }

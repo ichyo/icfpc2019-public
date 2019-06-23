@@ -249,3 +249,23 @@ pub struct Puzzle {
     pub includes: Vec<Point>,
     pub excludes: Vec<Point>,
 }
+
+pub struct Commands(Vec<Vec<Command>>);
+
+impl Commands {
+    pub fn new(cmds: Vec<Vec<Command>>) -> Commands {
+        assert!(!cmds.is_empty());
+        Commands(cmds)
+    }
+    pub fn len(&self) -> usize {
+        self.0[0].len()
+    }
+}
+
+impl fmt::Display for Commands {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0.iter().map(|cmds| {
+            cmds.iter().map(|c| format!("{}", c)).collect::<Vec<_>>().join("")
+        }).collect::<Vec<_>>().join("#"))
+    }
+}

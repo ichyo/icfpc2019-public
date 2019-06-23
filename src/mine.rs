@@ -110,11 +110,8 @@ impl Client {
         }
     }
 
-    fn dump_task_answer(&self, block: usize, answer: Vec<Command>) {
-        let mut content = String::new();
-        for b in answer {
-            content.push_str(&format!("{}", b));
-        }
+    fn dump_task_answer(&self, block: usize, answer: Commands) {
+        let content = format!("{}", answer);
         match self.dump_file(&format!("./mining/{}-task.sol", block), &content) {
             Ok(()) => {}
             Err(e) => {
