@@ -1,8 +1,7 @@
 use crate::models::*;
 use crate::utils::Matrix;
 
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::prelude::*;
 use std::collections::{HashMap, VecDeque};
 use std::time::Duration;
 use std::time::Instant;
@@ -223,6 +222,18 @@ impl<'a> State<'a> {
         is_valid && (not_passed || is_booster)
     }
 
+    fn count_pass(&self, robot_idx: usize, point: Point) -> usize {
+        self.robots[robot_idx]
+            .bodies_diff
+            .iter()
+            .map(|diff| point + *diff)
+            .filter(|p| match self.passed.get(*p) {
+                Some(false) => true,
+                _ => false,
+            })
+            .count()
+    }
+
     fn find_shortest_path(&self, robot_idx: usize, start: Point) -> Option<Vec<Move>> {
         let mut rng = thread_rng();
         let mut moves = [
@@ -236,19 +247,26 @@ impl<'a> State<'a> {
         let mut queue = VecDeque::new();
         queue.push_back(start);
         data.insert(start, (Move::Noop, 0));
+
+        let mut goal = None;
+        let mut goal_value = None;
+
         while let Some(c) = queue.pop_front() {
             let (_, cost) = data[&c];
 
             if self.is_goal(robot_idx, c) {
-                let mut res = Vec::new();
-                let mut iter = c;
-                while iter != start {
-                    let (mv, _) = &data[&iter];
-                    iter = iter.revert_with(mv);
-                    res.push(mv.clone());
+                let value = (self.count_pass(robot_idx, c), rng.gen::<usize>());
+                match goal_value {
+                    Some(goal_value) if goal_value > value => {}
+                    _ => {
+                        goal = Some(c);
+                        goal_value = Some(value);
+                    }
                 }
-                res.reverse();
-                return Some(res);
+            }
+
+            if goal.is_some() {
+                continue;
             }
 
             moves.shuffle(&mut rng);
@@ -261,6 +279,18 @@ impl<'a> State<'a> {
                     });
                 }
             }
+        }
+
+        if let Some(goal) = goal {
+            let mut res = Vec::new();
+            let mut iter = goal;
+            while iter != start {
+                let (mv, _) = &data[&iter];
+                iter = iter.revert_with(mv);
+                res.push(mv.clone());
+            }
+            res.reverse();
+            return Some(res);
         }
 
         None
