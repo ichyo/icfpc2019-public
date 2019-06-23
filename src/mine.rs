@@ -1,8 +1,6 @@
 use jsonrpc_client_http::{HttpHandle, HttpTransport};
-use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::{HashMap, HashSet, VecDeque};
 use std::{thread, time};
 
 use crate::models::*;

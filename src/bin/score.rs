@@ -1,6 +1,7 @@
 use clap::{App, Arg};
 use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
+use icfpc::parse::read_commands;
 use icfpc::utils::Matrix;
 use std::fs::File;
 use std::io::Read;
@@ -40,7 +41,7 @@ impl ScoreInfo {
     }
 }
 
-fn score_small(task: Task, output_len: usize) -> ScoreInfo {
+fn score_small(task: Task, commands: Commands) -> ScoreInfo {
     let map_points = task.map.enumerate_points();
 
     let width = map_points.iter().map(|p| p.x).max().unwrap() + 1;
@@ -69,7 +70,7 @@ fn score_small(task: Task, output_len: usize) -> ScoreInfo {
         width: width as usize,
         height: height as usize,
         best_estimated: remaining * 3 / 5,
-        team_time: output_len,
+        team_time: commands.len(),
     }
 }
 
@@ -95,14 +96,14 @@ fn main() {
 
     let mut sum_scores = 0.0;
     for input in inputs {
-        let output_len = {
+        let commands = {
             let output_path = format!("{}/{}", output_root, input.output_file_name());
             let mut output_file = File::open(&output_path).unwrap();
             let mut output_str = String::new();
             output_file.read_to_string(&mut output_str).unwrap();
-            output_str.trim_end().len()
+            read_commands(&output_str)
         };
-        let score_info = score_small(input.task, output_len);
+        let score_info = score_small(input.task, commands);
         eprintln!("{}: {}", input.id, score_info.debug());
         sum_scores += score_info.score();
     }

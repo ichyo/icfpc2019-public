@@ -1,6 +1,5 @@
 use crate::models::*;
 use glob::glob;
-use std::convert::TryFrom;
 use std::fs::File;
 use std::io::Read;
 use std::iter::Peekable;
@@ -51,8 +50,28 @@ fn skip_or_empty(iter: &mut Peekable<Chars>, expected: char) {
     }
 }
 
+fn read_i32(iter: &mut Peekable<Chars>, last: char) -> i32 {
+    let mut x = 0i32;
+    let minus = if let Some('-') = iter.peek() {
+        iter.next();
+        true
+    } else {
+        false
+    };
+    loop {
+        let c = iter.next().unwrap();
+        if c.is_digit(10) {
+            x = x * 10 + i32::from(c as u8 - b'0');
+        } else {
+            assert!(c == last);
+            return if minus { -x } else { x };
+        }
+    }
+}
+
 fn read_usize(iter: &mut Peekable<Chars>, last: char) -> usize {
     let mut x = 0usize;
+    assert!(*iter.peek().unwrap() == '-');
     loop {
         let c = iter.next().unwrap();
         if c.is_digit(10) {
@@ -66,9 +85,9 @@ fn read_usize(iter: &mut Peekable<Chars>, last: char) -> usize {
 
 fn read_point(iter: &mut Peekable<Chars>) -> Point {
     skip(iter, '(');
-    let x = read_usize(iter, ',');
-    let y = read_usize(iter, ')');
-    Point::new(i32::try_from(x).unwrap(), i32::try_from(y).unwrap())
+    let x = read_i32(iter, ',');
+    let y = read_i32(iter, ')');
+    Point::new(x, y)
 }
 
 fn read_map_internal(mut iter: &mut Peekable<Chars>) -> (Map, char) {
@@ -148,6 +167,44 @@ pub fn read_task(s: &str) -> Task {
         obstacles,
         boosters,
     }
+}
+
+fn read_command_internal(iter: &mut Peekable<Chars>) -> Vec<Command> {
+    let mut res = Vec::new();
+    while let Some(c) = iter.next() {
+        let cmd = match c {
+            'W' => Command::Move(Move::MoveUp),
+            'S' => Command::Move(Move::MoveDown),
+            'A' => Command::Move(Move::MoveLeft),
+            'D' => Command::Move(Move::MoveRight),
+            'Z' => Command::Move(Move::Noop),
+            'E' => Command::TurnRight,
+            'Q' => Command::TurnLeft,
+            'B' => {
+                let p = read_point(iter);
+                Command::NewHand(p)
+            }
+            'F' => Command::FastWheel,
+            'L' => Command::Drill,
+            'R' => Command::ResetBeacon,
+            'T' => {
+                let p = read_point(iter);
+                Command::ShiftBeacon(p)
+            }
+            'C' => Command::Cloning,
+            _ => unreachable!(),
+        };
+        res.push(cmd);
+    }
+    res
+}
+
+fn read_command(s: &str) -> Vec<Command> {
+    read_command_internal(&mut s.chars().peekable())
+}
+
+pub fn read_commands(s: &str) -> Commands {
+    Commands::new(s.split('#').map(|s| read_command(&s)).collect::<Vec<_>>())
 }
 
 fn find_files(input_root: &str) -> Vec<String> {

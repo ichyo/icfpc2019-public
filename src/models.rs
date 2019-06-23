@@ -36,7 +36,7 @@ impl Point {
             Move::MoveDown => Point::new(x, y - 1),
             Move::MoveRight => Point::new(x + 1, y),
             Move::MoveLeft => Point::new(x - 1, y),
-            _ => self,
+            Move::Noop => Point::new(x, y),
         }
     }
 
@@ -47,7 +47,7 @@ impl Point {
             Move::MoveDown => Point::new(x, y + 1),
             Move::MoveRight => Point::new(x - 1, y),
             Move::MoveLeft => Point::new(x + 1, y),
-            _ => unreachable!(),
+            Move::Noop => Point::new(x, y),
         }
     }
 }
@@ -62,7 +62,15 @@ pub struct Map(pub Vec<Point>);
 
 impl fmt::Display for Map {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.iter().map(|p| format!("{}", p)).collect::<Vec<_>>().join(","))?;
+        write!(
+            f,
+            "{}",
+            self.0
+                .iter()
+                .map(|p| format!("{}", p))
+                .collect::<Vec<_>>()
+                .join(",")
+        )?;
         Ok(())
     }
 }
@@ -129,6 +137,10 @@ impl Map {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -186,12 +198,27 @@ impl fmt::Display for Task {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}#", self.map)?;
         write!(f, "{}#", self.initial)?;
-        write!(f, "{}#", self.obstacles.iter().map(|o| format!("{}", o)).collect::<Vec<_>>().join(";"))?;
-        write!(f, "{}", self.boosters.iter().map(|b| format!("{}", b)).collect::<Vec<_>>().join(";"))?;
+        write!(
+            f,
+            "{}#",
+            self.obstacles
+                .iter()
+                .map(|o| format!("{}", o))
+                .collect::<Vec<_>>()
+                .join(";")
+        )?;
+        write!(
+            f,
+            "{}",
+            self.boosters
+                .iter()
+                .map(|b| format!("{}", b))
+                .collect::<Vec<_>>()
+                .join(";")
+        )?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Move {
@@ -212,6 +239,7 @@ pub enum Command {
     Drill,
     ResetBeacon,
     ShiftBeacon(Point),
+    Cloning,
 }
 
 impl fmt::Display for Command {
@@ -224,11 +252,12 @@ impl fmt::Display for Command {
             Command::Move(Move::Noop) => write!(f, "Z"),
             Command::TurnRight => write!(f, "E"),
             Command::TurnLeft => write!(f, "Q"),
-            Command::NewHand(p) => write!(f, "B({}, {})", p.x, p.y),
+            Command::NewHand(p) => write!(f, "B({},{})", p.x, p.y),
             Command::FastWheel => write!(f, "F"),
             Command::Drill => write!(f, "L"),
             Command::ResetBeacon => write!(f, "R"),
-            Command::ShiftBeacon(p) => write!(f, "T({}, {})", p.x, p.y),
+            Command::ShiftBeacon(p) => write!(f, "T({},{})", p.x, p.y),
+            Command::Cloning => write!(f, "C"),
         }
     }
 }
@@ -260,12 +289,26 @@ impl Commands {
     pub fn len(&self) -> usize {
         self.0[0].len()
     }
+    pub fn is_empty(&self) -> bool {
+        self.0[0].is_empty()
+    }
 }
 
 impl fmt::Display for Commands {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0.iter().map(|cmds| {
-            cmds.iter().map(|c| format!("{}", c)).collect::<Vec<_>>().join("")
-        }).collect::<Vec<_>>().join("#"))
+        write!(
+            f,
+            "{}",
+            self.0
+                .iter()
+                .map(|cmds| {
+                    cmds.iter()
+                        .map(|c| format!("{}", c))
+                        .collect::<Vec<_>>()
+                        .join("")
+                })
+                .collect::<Vec<_>>()
+                .join("#")
+        )
     }
 }
