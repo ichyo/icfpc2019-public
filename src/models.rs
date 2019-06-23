@@ -4,6 +4,92 @@ use std::fmt;
 use std::ops::Add;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct Place(Point, Direction);
+
+impl Place {
+    pub fn new(p: Point, d: Direction) -> Place {
+        Place(p, d)
+    }
+
+    pub fn move_with(&self, m: &Move) -> Place {
+        Place::new(self.0.move_with(m), self.1.move_with(m))
+    }
+
+    pub fn revert_with(&self, m: &Move) -> Place {
+        Place::new(self.0.revert_with(m), self.1.revert_with(m))
+    }
+
+    pub fn point(&self) -> Point {
+        self.0
+    }
+
+    pub fn dir(&self) -> Direction {
+        self.1
+    }
+
+    pub fn hand(&self, r: Point) -> Point {
+        self.0 + self.1.convert(r)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum Direction {
+    Left,
+    Up,
+    Right,
+    Down,
+}
+
+impl Direction {
+    pub fn turn_right(self) -> Direction {
+        match self {
+            Direction::Left => Direction::Up,
+            Direction::Up => Direction::Right,
+            Direction::Right => Direction::Down,
+            Direction::Down => Direction::Left,
+        }
+    }
+    pub fn turn_left(self) -> Direction {
+        match self {
+            Direction::Left => Direction::Down,
+            Direction::Up => Direction::Left,
+            Direction::Right => Direction::Up,
+            Direction::Down => Direction::Right,
+        }
+    }
+    pub fn convert(self, p: Point) -> Point {
+        match self {
+            Direction::Right => p,
+            Direction::Up => Point::new(-p.y, p.x),
+            Direction::Left => Point::new(-p.x, -p.y),
+            Direction::Down => Point::new(p.y, -p.x),
+        }
+    }
+    pub fn move_with(self, kind: &Move) -> Direction {
+        match kind {
+            Move::MoveUp => self,
+            Move::MoveDown => self,
+            Move::MoveRight => self,
+            Move::MoveLeft => self,
+            Move::Noop => self,
+            Move::TurnLeft => self.turn_left(),
+            Move::TurnRight => self.turn_right(),
+        }
+    }
+    pub fn revert_with(self, kind: &Move) -> Direction {
+        match kind {
+            Move::MoveUp => self,
+            Move::MoveDown => self,
+            Move::MoveRight => self,
+            Move::MoveLeft => self,
+            Move::Noop => self,
+            Move::TurnLeft => self.turn_right(),
+            Move::TurnRight => self.turn_left(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
@@ -36,7 +122,9 @@ impl Point {
             Move::MoveDown => Point::new(x, y - 1),
             Move::MoveRight => Point::new(x + 1, y),
             Move::MoveLeft => Point::new(x - 1, y),
-            Move::Noop => Point::new(x, y),
+            Move::Noop => self,
+            Move::TurnLeft => self,
+            Move::TurnRight => self,
         }
     }
 
@@ -47,12 +135,14 @@ impl Point {
             Move::MoveDown => Point::new(x, y + 1),
             Move::MoveRight => Point::new(x - 1, y),
             Move::MoveLeft => Point::new(x + 1, y),
-            Move::Noop => Point::new(x, y),
+            Move::Noop => self,
+            Move::TurnLeft => self,
+            Move::TurnRight => self,
         }
     }
 }
 
-pub enum Direction {
+pub enum LineDirection {
     Verticle,
     Horizontal,
 }
@@ -88,16 +178,16 @@ impl Map {
         self.0.iter().map(|p| p.y).max().unwrap() as usize + 1
     }
 
-    pub fn iter_lines(&self) -> Vec<(Direction, Point, Point)> {
+    pub fn iter_lines(&self) -> Vec<(LineDirection, Point, Point)> {
         let mut iter = self.0.iter().cloned().cycle().peekable();
         let mut res = Vec::new();
         for _ in 0..self.0.len() {
             let cur = iter.next().unwrap();
             let next = *iter.peek().unwrap();
             if cur.x == next.x {
-                res.push((Direction::Verticle, cur, next));
+                res.push((LineDirection::Verticle, cur, next));
             } else if cur.y == next.y {
-                res.push((Direction::Horizontal, cur, next));
+                res.push((LineDirection::Horizontal, cur, next));
             } else {
                 unreachable!();
             }
@@ -110,7 +200,7 @@ impl Map {
         let g_max_x = self.0.iter().map(|p| p.x).max().unwrap();
         let mut cross_y_map = HashMap::new();
         for (dir, p, q) in self.iter_lines() {
-            if let Direction::Horizontal = dir {
+            if let LineDirection::Horizontal = dir {
                 let min_x = cmp::min(p.x, q.x);
                 let max_x = cmp::max(p.x, q.x);
                 for x in min_x..max_x {
@@ -227,13 +317,13 @@ pub enum Move {
     MoveLeft,
     MoveRight,
     Noop,
+    TurnLeft,
+    TurnRight,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Command {
     Move(Move),
-    TurnRight,
-    TurnLeft,
     NewHand(Point),
     FastWheel,
     Drill,
@@ -241,6 +331,7 @@ pub enum Command {
     ShiftBeacon(Point),
     Cloning,
 }
+
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -250,8 +341,8 @@ impl fmt::Display for Command {
             Command::Move(Move::MoveLeft) => write!(f, "A"),
             Command::Move(Move::MoveRight) => write!(f, "D"),
             Command::Move(Move::Noop) => write!(f, "Z"),
-            Command::TurnRight => write!(f, "E"),
-            Command::TurnLeft => write!(f, "Q"),
+            Command::Move(Move::TurnRight) => write!(f, "E"),
+            Command::Move(Move::TurnLeft) => write!(f, "Q"),
             Command::NewHand(p) => write!(f, "B({},{})", p.x, p.y),
             Command::FastWheel => write!(f, "F"),
             Command::Drill => write!(f, "L"),

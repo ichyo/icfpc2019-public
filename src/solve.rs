@@ -8,7 +8,7 @@ use std::time::Instant;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Robot {
-    current_point: Point,
+    current_place: Place,
     bodies_diff: Vec<Point>,
     new_bodies: VecDeque<Point>,
     commands: Vec<Command>,
@@ -17,7 +17,7 @@ pub struct Robot {
 
 impl Robot {
     fn clone_from(robot: &Robot) -> Robot {
-        let current_point = robot.current_point;
+        let current_place = robot.current_place;
 
         let bodies_diff = vec![
             Point::new(0, 0),
@@ -36,7 +36,7 @@ impl Robot {
         let commands = robot.commands.clone();
         let executed = Vec::new();
         Robot {
-            current_point,
+            current_place,
             bodies_diff,
             new_bodies,
             commands,
@@ -46,6 +46,8 @@ impl Robot {
 
     fn initialize(task: &Task) -> Robot {
         let current_point = task.initial;
+        let current_dir = Direction::Right;
+        let current_place = Place::new(current_point, current_dir);
 
         let bodies_diff = vec![
             Point::new(0, 0),
@@ -54,17 +56,31 @@ impl Robot {
             Point::new(1, -1),
         ];
         let new_bodies = VecDeque::from(vec![
+            Point::new(2, 0),
+            Point::new(3, 0),
+            Point::new(4, 0),
+            Point::new(5, 0),
+            Point::new(6, 0),
+            Point::new(7, 0),
+            Point::new(8, 0),
+            Point::new(9, 0),
+            Point::new(10, 0),
+            Point::new(11, 0),
+            Point::new(12, 0),
+            Point::new(13, 0),
+            /*
             Point::new(-1, 0),
             Point::new(-1, 1),
             Point::new(-1, -1),
             Point::new(0, -1),
             Point::new(0, 1),
+            */
         ]);
 
         let commands = Vec::new();
         let executed = Vec::new();
         Robot {
-            current_point,
+            current_place,
             bodies_diff,
             new_bodies,
             commands,
@@ -73,19 +89,11 @@ impl Robot {
     }
 
     fn move_with(&mut self, m: &Move) {
-        self.current_point = self.current_point.move_with(m);
+        self.current_place = self.current_place.move_with(m);
     }
 
     fn consume_new_hand(&mut self) -> Option<Point> {
         self.new_bodies.pop_front()
-    }
-
-    fn bodies(&self) -> Vec<Point> {
-        self.bodies_diff
-            .iter()
-            .cloned()
-            .map(|diff| self.current_point + diff)
-            .collect::<Vec<_>>()
     }
 }
 
@@ -179,16 +187,35 @@ impl<'a> State<'a> {
         )
     }
 
-    fn is_goal(&self, robot_idx: usize, goal: Point) -> bool {
+    fn hand_reach(&self, robot_idx: usize, diff: Point) -> bool {
+        if diff.x.abs() > 1 || diff.y.abs() > 1 {
+            let place = self.robots[robot_idx].current_place;
+            let d = std::cmp::max(diff.x.abs(), diff.y.abs());
+            assert!(diff.x.abs() == 0 || diff.x.abs() == d);
+            assert!(diff.y.abs() == 0 || diff.y.abs() == d);
+            let unit = Point::new(diff.x / d, diff.y / d);
+            for i in 1..=d {
+                let diff = Point::new(unit.x * i, unit.y * i);
+                let hand = place.hand(diff);
+                if let Some(true) = self.valid.get(hand) {
+                } else {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    fn is_goal(&self, robot_idx: usize, goal: Place) -> bool {
         if self.remaining_clone > 0 {
-            return match self.booster_map.get(goal) {
+            return match self.booster_map.get(goal.point()) {
                 Some(Some(BoosterType::Cloning)) => true,
                 _ => false,
             };
         }
 
         if self.clone_count > 0 {
-            return match self.booster_map.get(goal) {
+            return match self.booster_map.get(goal.point()) {
                 Some(Some(BoosterType::Spawn)) => true,
                 _ => false,
             };
@@ -202,7 +229,7 @@ impl<'a> State<'a> {
                 .find(|(_, r)| !r.new_bodies.is_empty())
             {
                 if robot_idx == first_robot_index {
-                    return match self.booster_map.get(goal) {
+                    return match self.booster_map.get(goal.point()) {
                         Some(Some(BoosterType::NewHand)) => true,
                         _ => false,
                     };
@@ -213,18 +240,20 @@ impl<'a> State<'a> {
         let not_passed = self.robots[robot_idx]
             .bodies_diff
             .iter()
-            .map(|diff| goal + *diff)
+            .cloned()
+            .filter(|diff| self.hand_reach(robot_idx, *diff))
+            .map(|diff| goal.hand(diff))
             .any(|p| match self.passed.get(p) {
                 Some(false) => true,
                 _ => false,
             });
 
-        let is_booster = match self.booster_map.get(goal) {
+        let is_booster = match self.booster_map.get(goal.point()) {
             Some(Some(BoosterType::NewHand)) => true,
             _ => false,
         };
 
-        let is_valid = match self.valid.get(goal) {
+        let is_valid = match self.valid.get(goal.point()) {
             Some(true) => true,
             _ => false,
         };
@@ -232,11 +261,13 @@ impl<'a> State<'a> {
         is_valid && (not_passed || is_booster)
     }
 
-    fn count_pass(&self, robot_idx: usize, point: Point) -> usize {
+    fn count_pass(&self, robot_idx: usize, place: Place) -> usize {
         self.robots[robot_idx]
             .bodies_diff
             .iter()
-            .map(|diff| point + *diff)
+            .cloned()
+            .filter(|diff| self.hand_reach(robot_idx, *diff))
+            .map(|diff| place.hand(diff))
             .filter(|p| match self.passed.get(*p) {
                 Some(false) => true,
                 _ => false,
@@ -244,16 +275,18 @@ impl<'a> State<'a> {
             .count()
     }
 
-    fn find_shortest_path(&self, robot_idx: usize, start: Point) -> Option<Vec<Move>> {
+    fn find_shortest_path(&self, robot_idx: usize, start: Place) -> Option<Vec<Move>> {
         let mut rng = thread_rng();
         let mut moves = [
             Move::MoveUp,
             Move::MoveDown,
             Move::MoveLeft,
             Move::MoveRight,
+            Move::TurnLeft,
+            Move::TurnRight,
         ];
 
-        let mut data: HashMap<Point, (Move, u32)> = HashMap::new();
+        let mut data: HashMap<Place, (Move, u32)> = HashMap::new();
         let mut queue = VecDeque::new();
         queue.push_back(start);
         data.insert(start, (Move::Noop, 0));
@@ -261,19 +294,19 @@ impl<'a> State<'a> {
         let mut goal = None;
         let mut goal_value = None;
 
-        while let Some(c) = queue.pop_front() {
-            let (_, cost) = data[&c];
+        while let Some(place) = queue.pop_front() {
+            let (_, cost) = data[&place];
 
-            if self.is_goal(robot_idx, c) {
+            if self.is_goal(robot_idx, place) {
                 let value = (
                     u32::max_value() - cost,
-                    self.count_pass(robot_idx, c),
+                    self.count_pass(robot_idx, place),
                     rng.gen::<usize>(),
                 );
                 match goal_value {
                     Some(goal_value) if goal_value > value => {}
                     _ => {
-                        goal = Some(c);
+                        goal = Some(place);
                         goal_value = Some(value);
                     }
                 }
@@ -285,10 +318,10 @@ impl<'a> State<'a> {
 
             moves.shuffle(&mut rng);
             for m in &moves {
-                let nc = c.move_with(m);
-                if let Some(true) = self.valid.get(nc) {
-                    data.entry(nc).or_insert_with(|| {
-                        queue.push_back(nc);
+                let nplace = place.move_with(m);
+                if let Some(true) = self.valid.get(nplace.point()) {
+                    data.entry(nplace).or_insert_with(|| {
+                        queue.push_back(nplace);
                         (m.clone(), cost + 1)
                     });
                 }
@@ -311,8 +344,14 @@ impl<'a> State<'a> {
     }
 
     fn pass_current_point(&mut self, robot_idx: usize) {
-        let bodies = self.robots[robot_idx].bodies();
-        let current_point = self.robots[robot_idx].current_point;
+        let bodies = self.robots[robot_idx]
+            .bodies_diff
+            .iter()
+            .filter(|&&diff| self.hand_reach(robot_idx, diff))
+            .map(|&diff| self.robots[robot_idx].current_place.hand(diff))
+            .collect::<Vec<_>>();
+
+        let current_point = self.robots[robot_idx].current_place.point();
         for b in bodies {
             if let Some(false) = self.passed.get(b) {
                 self.passed.set(b, true);
@@ -348,7 +387,7 @@ impl<'a> State<'a> {
 
     pub fn fill_next_command(&mut self, robot_idx: usize) {
         assert!(self.turn <= self.robots[robot_idx].commands.len());
-        let current_point = self.robots[robot_idx].current_point;
+        let current_place = self.robots[robot_idx].current_place;
 
         if self.hand_count > 0 {
             let robot = &mut self.robots[robot_idx];
@@ -362,7 +401,7 @@ impl<'a> State<'a> {
 
         if self.clone_count > 0 {
             let robot = &mut self.robots[robot_idx];
-            if let Some(Some(BoosterType::Spawn)) = self.booster_map.get(current_point) {
+            if let Some(Some(BoosterType::Spawn)) = self.booster_map.get(current_place.point()) {
                 self.clone_count -= 1;
                 robot.commands.insert(self.turn, Command::Cloning);
                 robot.commands.truncate(self.turn + 1);
@@ -374,7 +413,7 @@ impl<'a> State<'a> {
             return;
         }
 
-        let base_moves = self.find_shortest_path(robot_idx, current_point);
+        let base_moves = self.find_shortest_path(robot_idx, current_place);
         if let Some(base_moves) = base_moves {
             for m in &base_moves {
                 self.robots[robot_idx]

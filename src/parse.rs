@@ -178,8 +178,8 @@ fn read_command_internal(iter: &mut Peekable<Chars>) -> Vec<Command> {
             'A' => Command::Move(Move::MoveLeft),
             'D' => Command::Move(Move::MoveRight),
             'Z' => Command::Move(Move::Noop),
-            'E' => Command::TurnRight,
-            'Q' => Command::TurnLeft,
+            'E' => Command::Move(Move::TurnRight),
+            'Q' => Command::Move(Move::TurnLeft),
             'B' => {
                 let p = read_point(iter);
                 Command::NewHand(p)
