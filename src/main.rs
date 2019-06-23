@@ -9,7 +9,7 @@ use icfpc::parse::read_all_inputs;
 use icfpc::solve::solve_small_while;
 
 fn solve<W: Write>(task: Task, f: &mut W) {
-    let cmds = solve_small_while(task, std::time::Duration::from_millis(5000));
+    let cmds = solve_small_while(task, std::time::Duration::from_millis(500));
     write!(f, "{}", cmds).unwrap();
 }
 

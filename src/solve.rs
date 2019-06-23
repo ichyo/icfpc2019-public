@@ -30,8 +30,8 @@ impl Robot {
             Point::new(-1, 0),
             Point::new(-1, 1),
             Point::new(-1, -1),
-            Point::new(0, -1),
-            Point::new(0, 1),
+            //Point::new(0, -1),
+            //Point::new(0, 1),
         ]);
 
         let commands = robot.commands.clone();
@@ -186,7 +186,12 @@ impl<'a> State<'a> {
         }
 
         if self.remaining_hand > 0 {
-            if let Some((first_robot_index, _)) = self.robots.iter().enumerate().find(|(_, r)| !r.new_bodies.is_empty()) {
+            if let Some((first_robot_index, _)) = self
+                .robots
+                .iter()
+                .enumerate()
+                .find(|(_, r)| !r.new_bodies.is_empty())
+            {
                 if robot_idx == first_robot_index {
                     return match self.booster_map.get(goal) {
                         Some(Some(BoosterType::NewHand)) => true,
