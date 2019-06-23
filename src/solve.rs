@@ -17,6 +17,34 @@ pub struct Robot {
 }
 
 impl Robot {
+    fn clone_from(robot: &Robot) -> Robot {
+        let current_point = robot.current_point;
+
+        let bodies_diff = vec![
+            Point::new(0, 0),
+            Point::new(1, 1),
+            Point::new(1, 0),
+            Point::new(1, -1),
+        ];
+        let new_bodies = VecDeque::from(vec![
+            Point::new(-1, 0),
+            Point::new(-1, 1),
+            Point::new(-1, -1),
+            Point::new(0, -1),
+            Point::new(0, 1),
+        ]);
+
+        let commands = robot.commands.clone();
+        let executed = Vec::new();
+        Robot {
+            current_point,
+            bodies_diff,
+            new_bodies,
+            commands,
+            executed,
+        }
+    }
+
     fn initialize(task: &Task) -> Robot {
         let current_point = task.initial;
 
@@ -251,13 +279,15 @@ impl<'a> State<'a> {
     }
 
     pub fn fill_next_command(&mut self, robot_idx: usize) {
+        assert!(self.turn <= self.robots[robot_idx].commands.len());
         let current_point = self.robots[robot_idx].current_point;
 
         if self.hand_count > 0 {
             let robot = &mut self.robots[robot_idx];
             if let Some(new_hand) = robot.consume_new_hand() {
                 self.hand_count -= 1;
-                robot.commands.push(Command::NewHand(new_hand));
+                robot.commands.insert(self.turn, Command::NewHand(new_hand));
+                robot.commands.truncate(self.turn + 1);
                 return;
             }
         }
@@ -266,9 +296,14 @@ impl<'a> State<'a> {
             let robot = &mut self.robots[robot_idx];
             if let Some(Some(BoosterType::Spawn)) = self.booster_map.get(current_point) {
                 self.clone_count -= 1;
-                robot.commands.push(Command::Cloning);
+                robot.commands.insert(self.turn, Command::Cloning);
+                robot.commands.truncate(self.turn + 1);
                 return;
             }
+        }
+
+        if self.turn < self.robots[robot_idx].commands.len() {
+            return;
         }
 
         let base_moves = self.find_shortest_path(robot_idx, current_point);
@@ -299,10 +334,7 @@ impl<'a> State<'a> {
                 return false;
             }
 
-            assert!(turn <= self.robots[idx].commands.len());
-            if turn == self.robots[idx].commands.len() {
-                self.fill_next_command(idx);
-            }
+            self.fill_next_command(idx);
 
             assert!(turn < self.robots[idx].commands.len());
             let m = self.robots[idx].commands[turn].clone();
@@ -314,8 +346,7 @@ impl<'a> State<'a> {
                     self.robots[idx].bodies_diff.push(*p);
                 }
                 Command::Cloning => {
-                    let mut new_robot = self.robots[idx].clone();
-                    new_robot.executed.clear();
+                    let new_robot = Robot::clone_from(&self.robots[idx]);
                     assert!(new_robot.commands.len() == self.turn + 1);
                     self.robots.push(new_robot);
                 }
