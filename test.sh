@@ -17,7 +17,7 @@ echo "Creating $OUTPUT"
 mkdir -p $OUTPUT
 
 SECONDS=0
-./target/release/icfpc2019 --output $OUTPUT --input ./input
+./target/release/icfpc2019 --output $OUTPUT --input ./input --duration 300
 echo "$(date +"%Y-%m-%d %T"): running time is $SECONDS secs" | tee -a $LOG_FILE
 
 cargo run --bin score --release -- --input ./input --output $OUTPUT | tee -a $LOG_FILE

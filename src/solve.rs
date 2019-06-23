@@ -255,7 +255,11 @@ impl<'a> State<'a> {
             let (_, cost) = data[&c];
 
             if self.is_goal(robot_idx, c) {
-                let value = (self.count_pass(robot_idx, c), rng.gen::<usize>());
+                let value = (
+                    u32::max_value() - cost,
+                    self.count_pass(robot_idx, c),
+                    rng.gen::<usize>(),
+                );
                 match goal_value {
                     Some(goal_value) if goal_value > value => {}
                     _ => {
