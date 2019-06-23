@@ -132,7 +132,7 @@ fn read_boosters(mut iter: &mut Peekable<Chars>) -> Vec<Booster> {
     res
 }
 
-fn read_task(s: &str) -> Task {
+pub fn read_task(s: &str) -> Task {
     let mut iter = s.chars().peekable();
     let map = read_map(&mut iter);
     let initial = read_initial(&mut iter);
@@ -164,7 +164,7 @@ fn find_files(input_root: &str) -> Vec<String> {
         .collect::<Vec<String>>()
 }
 
-fn read_puzzle(s: &str) -> Puzzle {
+pub fn read_puzzle(s: &str) -> Puzzle {
     let mut iter = s.chars().peekable();
     let block = read_usize(&mut iter, ',');
     let epock = read_usize(&mut iter, ',');

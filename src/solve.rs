@@ -217,16 +217,16 @@ impl<'a> State<'a> {
 
     // true if it continues
     pub fn next_state(&mut self) -> bool {
+        self.pass_current_point();
+        if self.remaining_pass == 0 {
+            return false;
+        }
+
         while self.hand_count > 0 && !self.new_bodies.is_empty() {
             let new_hand = self.new_bodies.pop_front().unwrap();
             self.hand_count -= 1;
             self.bodies_diff.push(new_hand);
             self.commands.push(Command::NewHand(new_hand));
-        }
-
-        self.pass_current_point();
-        if self.remaining_pass == 0 {
-            return false;
         }
 
         let base_moves = self.find_shortest_path(self.current_point);
@@ -242,17 +242,11 @@ impl<'a> State<'a> {
 }
 
 pub fn solve_small(task: Task) -> Vec<Command> {
-    let times = 5_000_0 / task.width / task.height;
-    (0..std::cmp::max(times, 10))
-        .map(|_| {
-            let mut state = State::initialize(&task);
-            loop {
-                if !state.next_state() {
-                    break;
-                }
-            }
-            state.commands
-        })
-        .min_by_key(|c| c.len())
-        .unwrap()
+    let mut state = State::initialize(&task);
+    loop {
+        if !state.next_state() {
+            break;
+        }
+    }
+    state.commands
 }

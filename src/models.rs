@@ -17,6 +17,13 @@ impl Add for Point {
     }
 }
 
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({},{})", self.x, self.y)?;
+        Ok(())
+    }
+}
+
 impl Point {
     pub fn new(x: i32, y: i32) -> Point {
         Point { x, y }
@@ -52,6 +59,13 @@ pub enum Direction {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Map(pub Vec<Point>);
+
+impl fmt::Display for Map {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0.iter().map(|p| format!("{}", p)).collect::<Vec<_>>().join(","))?;
+        Ok(())
+    }
+}
 
 impl Map {
     pub fn new(ps: Vec<Point>) -> Map {
@@ -111,6 +125,10 @@ impl Map {
         }
         res
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -121,6 +139,19 @@ pub enum BoosterType {
     Teleports,
     Cloning,
     Spawn,
+}
+
+impl fmt::Display for BoosterType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BoosterType::NewHand => write!(f, "B"),
+            BoosterType::FastMove => write!(f, "F"),
+            BoosterType::Drill => write!(f, "L"),
+            BoosterType::Teleports => write!(f, "R"),
+            BoosterType::Cloning => write!(f, "C"),
+            BoosterType::Spawn => write!(f, "X"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -135,6 +166,12 @@ impl Booster {
     }
 }
 
+impl fmt::Display for Booster {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.kind, self.point)
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Task {
     pub width: usize,
@@ -144,6 +181,17 @@ pub struct Task {
     pub obstacles: Vec<Map>,
     pub boosters: Vec<Booster>,
 }
+
+impl fmt::Display for Task {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}#", self.map)?;
+        write!(f, "{}#", self.initial)?;
+        write!(f, "{}#", self.obstacles.iter().map(|o| format!("{}", o)).collect::<Vec<_>>().join(";"))?;
+        write!(f, "{}", self.boosters.iter().map(|b| format!("{}", b)).collect::<Vec<_>>().join(";"))?;
+        Ok(())
+    }
+}
+
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Move {
@@ -185,6 +233,7 @@ impl fmt::Display for Command {
     }
 }
 
+#[derive(Debug)]
 pub struct Puzzle {
     pub block: usize,
     pub epock: usize,

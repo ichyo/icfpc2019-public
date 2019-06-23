@@ -49,3 +49,36 @@ impl<T: Clone> Matrix<T> {
         }
     }
 }
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub struct Range {
+    pub start: usize,
+    pub end: usize,
+}
+
+impl Range {
+    pub fn new(start: usize, end: usize) -> Range {
+        Range { start, end }
+    }
+    pub fn len(&self) -> usize {
+        self.end - self.start
+    }
+    pub fn is_empty(&self) -> bool {
+        self.end <= self.start
+    }
+    pub fn contains(&self, x: usize) -> bool {
+        self.start <= x && x < self.end
+    }
+    pub fn contains_all(&self, xs: &[usize]) -> bool {
+        xs.iter().all(|x| self.contains(*x))
+    }
+    pub fn intersect(&self, other: Range) -> bool {
+        !(self.end <= other.start || other.end <= self.start)
+    }
+    pub fn split(&self, mid: usize) -> (Range, Range) {
+        assert!(self.contains(mid));
+        let left = Range::new(self.start, mid);
+        let right = Range::new(mid + 1, self.end);
+        (left, right)
+    }
+}
