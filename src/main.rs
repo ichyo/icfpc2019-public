@@ -9,7 +9,8 @@ use icfpc::parse::read_all_inputs;
 use icfpc::solve::solve_small_while;
 
 fn solve<W: Write>(task: Task, f: &mut W) {
-    let cmds = solve_small_while(task, std::time::Duration::from_millis(10000));
+    // 30 seconds -> 10 minutes in total
+    let cmds = solve_small_while(task, std::time::Duration::from_millis(30000));
     write!(f, "{}", cmds).unwrap();
 }
 
