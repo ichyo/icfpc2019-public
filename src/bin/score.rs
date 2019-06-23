@@ -69,7 +69,7 @@ fn score_small(task: Task, commands: Commands) -> ScoreInfo {
     ScoreInfo {
         width: width as usize,
         height: height as usize,
-        best_estimated: remaining * 3 / 5,
+        best_estimated: remaining * 32 / 100,
         team_time: commands.len(),
     }
 }

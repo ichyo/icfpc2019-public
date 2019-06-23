@@ -71,7 +71,7 @@ fn read_i32(iter: &mut Peekable<Chars>, last: char) -> i32 {
 
 fn read_usize(iter: &mut Peekable<Chars>, last: char) -> usize {
     let mut x = 0usize;
-    assert!(*iter.peek().unwrap() == '-');
+    assert!(*iter.peek().unwrap() != '-');
     loop {
         let c = iter.next().unwrap();
         if c.is_digit(10) {
