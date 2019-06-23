@@ -65,6 +65,14 @@ impl Direction {
             Direction::Down => Point::new(p.y, -p.x),
         }
     }
+    pub fn reconvert(self, p: Point) -> Point {
+        match self {
+            Direction::Right => p,
+            Direction::Up => Point::new(p.y, -p.x),
+            Direction::Left => Point::new(-p.x, -p.y),
+            Direction::Down => Point::new(-p.y, p.x),
+        }
+    }
     pub fn move_with(self, kind: &Move) -> Direction {
         match kind {
             Move::MoveUp => self,

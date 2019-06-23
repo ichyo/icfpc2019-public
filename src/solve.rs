@@ -385,6 +385,7 @@ impl<'a> State<'a> {
             let robot = &mut self.robots[robot_idx];
             if let Some(new_hand) = robot.consume_new_hand() {
                 self.hand_count -= 1;
+                let new_hand = robot.current_place.dir().convert(new_hand);
                 robot.commands.insert(self.turn, Command::NewHand(new_hand));
                 robot.commands.truncate(self.turn + 1);
                 return;
@@ -446,7 +447,8 @@ impl<'a> State<'a> {
                     self.robots[idx].move_with(&m);
                 }
                 Command::NewHand(ref p) => {
-                    self.robots[idx].bodies_diff.push(*p);
+                    let p = self.robots[idx].current_place.dir().reconvert(*p);
+                    self.robots[idx].bodies_diff.push(p);
                 }
                 Command::Cloning => {
                     let new_robot = Robot::clone_from(&self.robots[idx]);
