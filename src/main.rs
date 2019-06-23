@@ -33,13 +33,17 @@ fn main() {
             Arg::with_name("duration")
                 .long("duration")
                 .takes_value(true)
-                .help("millis to wait")
+                .help("millis to wait"),
         )
         .get_matches();
 
     let input_root = matches.value_of("input").expect("no input specified");
     let output_root = matches.value_of("output");
-    let millis = matches.value_of("period").unwrap_or("300").parse::<u64>().unwrap();
+    let millis = matches
+        .value_of("duration")
+        .unwrap_or("300")
+        .parse::<u64>()
+        .unwrap();
     let duration = Duration::from_millis(millis);
 
     let inputs = read_all_inputs(&input_root);
