@@ -223,18 +223,12 @@ impl<'a> State<'a> {
         }
 
         if self.remaining_hand > 0 {
-            if let Some((first_robot_index, _)) = self
-                .robots
-                .iter()
-                .enumerate()
-                .find(|(_, r)| !r.new_bodies.is_empty())
-            {
-                if robot_idx == first_robot_index {
-                    return match self.booster_map.get(goal.point()) {
-                        Some(Some(BoosterType::NewHand)) => true,
-                        _ => false,
-                    };
-                }
+            let first_robot_index = 0;
+            if robot_idx == first_robot_index {
+                return match self.booster_map.get(goal.point()) {
+                    Some(Some(BoosterType::NewHand)) => true,
+                    _ => false,
+                };
             }
         }
 
@@ -388,13 +382,36 @@ impl<'a> State<'a> {
         let current_place = self.robots[robot_idx].current_place;
 
         if self.hand_count > 0 {
-            let robot = &mut self.robots[robot_idx];
-            if let Some(new_hand) = robot.consume_new_hand() {
-                self.hand_count -= 1;
-                let new_hand = robot.current_place.dir().convert(new_hand);
-                robot.commands.insert(self.turn, Command::NewHand(new_hand));
-                robot.commands.truncate(self.turn + 1);
-                return;
+            let max_size = self
+                .robots
+                .iter()
+                .map(|r| r.new_bodies.len())
+                .max()
+                .unwrap();
+            if let Some((first_non_empty_idx, _)) = self
+                .robots
+                .iter()
+                .enumerate()
+                .find(|(_, r)| !r.new_bodies.is_empty() && r.new_bodies.len() == max_size)
+            {
+                /*
+                if let Some((first_non_empty_idx, _)) = self
+                    .robots
+                    .iter()
+                    .enumerate()
+                    .find(|(_, r)| !r.new_bodies.is_empty())
+                {
+                    */
+                if first_non_empty_idx == robot_idx {
+                    let robot = &mut self.robots[robot_idx];
+                    if let Some(new_hand) = robot.consume_new_hand() {
+                        self.hand_count -= 1;
+                        let new_hand = robot.current_place.dir().convert(new_hand);
+                        robot.commands.insert(self.turn, Command::NewHand(new_hand));
+                        robot.commands.truncate(self.turn + 1);
+                        return;
+                    }
+                }
             }
         }
 
