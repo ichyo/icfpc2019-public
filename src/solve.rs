@@ -348,14 +348,16 @@ impl<'a> State<'a> {
             .iter()
             .filter_map(|diff| self.hand_reach(self.robots[robot_idx].current_place, *diff))
             .collect::<Vec<_>>();
-
-        let current_point = self.robots[robot_idx].current_place.point();
         for b in bodies {
             if let Some(false) = self.passed.get(b) {
                 self.passed.set(b, true);
                 self.remaining_pass -= 1;
             }
         }
+    }
+
+    pub fn get_booster(&mut self, robot_idx: usize) {
+        let current_point = self.robots[robot_idx].current_place.point();
         if let Some(Some(kind)) = self.booster_map.get(current_point) {
             match kind {
                 BoosterType::NewHand => {
@@ -447,6 +449,7 @@ impl<'a> State<'a> {
         let robots_len = self.robots.len();
         for idx in 0..robots_len {
             self.pass_current_point(idx);
+            self.get_booster(idx);
 
             if self.remaining_pass == 0 {
                 return false;
@@ -472,6 +475,7 @@ impl<'a> State<'a> {
                 _ => unreachable!(),
             }
             self.robots[idx].executed.push(m);
+            self.pass_current_point(idx);
         }
         self.turn += 1;
         assert!(self.turn < 1_000_000_000);
