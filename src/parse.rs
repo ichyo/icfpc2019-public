@@ -22,6 +22,9 @@ impl Input {
     pub fn output_file_name(&self) -> String {
         format!("prob-{}.sol", self.id)
     }
+    pub fn buy_file_name(&self) -> String {
+        format!("prob-{}.buy", self.id)
+    }
 }
 
 pub fn read_all_inputs(dir: &str) -> Vec<Input> {

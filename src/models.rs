@@ -411,3 +411,32 @@ impl fmt::Display for Commands {
         )
     }
 }
+
+pub struct Buy(Vec<BoosterType>);
+
+impl Buy {
+    pub fn empty() -> Buy {
+        Buy::new(Vec::new())
+    }
+    pub fn new(bs: Vec<BoosterType>) -> Buy {
+        Buy(bs)
+    }
+    pub fn push(&mut self, b: &BoosterType) {
+        self.0.push(b.clone());
+    }
+}
+
+impl fmt::Display for Buy {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.0
+                .iter()
+                .map(|b| {
+                    format!("{}", b)
+                })
+                .collect::<String>()
+        )
+    }
+}

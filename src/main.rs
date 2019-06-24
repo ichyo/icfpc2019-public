@@ -7,11 +7,14 @@ use std::io::Write;
 use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
 use icfpc::solve::solve_small_while;
+use icfpc::solve::determine_buy;
 use std::time::Duration;
 
-fn solve<W: Write>(task: Task, f: &mut W, duration: Duration) {
-    let cmds = solve_small_while(task, duration);
+fn solve<W: Write>(task: Task, f: &mut W, b: &mut W, duration: Duration) {
+    let buy = determine_buy(&task);
+    let cmds = solve_small_while(task, &buy, duration);
     write!(f, "{}", cmds).unwrap();
+    write!(b, "{}", buy).unwrap();
 }
 
 fn main() {
@@ -49,15 +52,17 @@ fn main() {
     let inputs = read_all_inputs(&input_root);
     let progress_bar = ProgressBar::new(inputs.len() as u64);
     inputs.into_par_iter().for_each(|input| {
-        let mut output_file: Box<dyn Write> = match output_root {
+        let (mut output_file, mut buy_file): (Box<dyn Write>, Box<dyn Write>) = match output_root {
             Some(output_root) => {
                 let output_path = format!("{}/{}", output_root, input.output_file_name());
                 let output_file = File::create(&output_path).unwrap();
-                Box::new(output_file)
+                let buy_path = format!("{}/{}", output_root, input.buy_file_name());
+                let buy_file = File::create(&buy_path).unwrap();
+                (Box::new(output_file), Box::new(buy_file))
             }
-            None => Box::new(std::io::stdout()),
+            None => (Box::new(std::io::stdout()), Box::new(std::io::sink())),
         };
-        solve(input.task, &mut output_file, duration);
+        solve(input.task, &mut output_file, &mut buy_file, duration);
         progress_bar.inc(1);
     });
     progress_bar.finish();

@@ -110,7 +110,7 @@ pub struct State<'a> {
 }
 
 impl<'a> State<'a> {
-    fn initialize(task: &'a Task) -> State<'a> {
+    fn initialize(task: &'a Task, buy: &Buy) -> State<'a> {
         let map_points = task.map.enumerate_points();
 
         let width = task.width;
@@ -138,7 +138,8 @@ impl<'a> State<'a> {
             }
         }
 
-        if task.boosters.iter().all(|b| b.kind != BoosterType::Spawn) {
+        let no_spawn = task.boosters.iter().all(|b| b.kind != BoosterType::Spawn);
+        if no_spawn {
             remaining_clone = 0;
         }
 
@@ -466,14 +467,14 @@ impl<'a> State<'a> {
     }
 }
 
-pub fn solve_small_while(task: Task, duration: Duration) -> Commands {
-    let mut res = solve_small(task.clone());
+pub fn solve_small_while(task: Task, buy: &Buy, duration: Duration) -> Commands {
+    let mut res = solve_small(task.clone(), buy);
     let now = Instant::now();;
     loop {
         if now.elapsed() >= duration {
             break;
         }
-        let new = solve_small(task.clone());
+        let new = solve_small(task.clone(), buy);
         if new.len() < res.len() {
             res = new;
         }
@@ -481,12 +482,16 @@ pub fn solve_small_while(task: Task, duration: Duration) -> Commands {
     res
 }
 
-pub fn solve_small(task: Task) -> Commands {
-    let mut state = State::initialize(&task);
+pub fn solve_small(task: Task, buy: &Buy) -> Commands {
+    let mut state = State::initialize(&task, buy);
     loop {
         if !state.next_state() {
             break;
         }
     }
     state.commands()
+}
+
+pub fn determine_buy(task: &Task) -> Buy {
+    Buy::empty()
 }
