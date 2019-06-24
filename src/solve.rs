@@ -33,6 +33,11 @@ impl Robot {
             Point::new(6, 0),
             Point::new(7, 0),
             Point::new(8, 0),
+            Point::new(9, 0),
+            Point::new(10, 0),
+            Point::new(11, 0),
+            Point::new(12, 0),
+            Point::new(13, 0),
         ]);
 
         let commands = robot.commands.clone();
@@ -382,26 +387,12 @@ impl<'a> State<'a> {
         let current_place = self.robots[robot_idx].current_place;
 
         if self.hand_count > 0 {
-            let max_size = self
-                .robots
-                .iter()
-                .map(|r| r.new_bodies.len())
-                .max()
-                .unwrap();
             if let Some((first_non_empty_idx, _)) = self
                 .robots
                 .iter()
                 .enumerate()
-                .find(|(_, r)| !r.new_bodies.is_empty() && r.new_bodies.len() == max_size)
+                .find(|(_, r)| !r.new_bodies.is_empty())
             {
-                /*
-                if let Some((first_non_empty_idx, _)) = self
-                    .robots
-                    .iter()
-                    .enumerate()
-                    .find(|(_, r)| !r.new_bodies.is_empty())
-                {
-                    */
                 if first_non_empty_idx == robot_idx {
                     let robot = &mut self.robots[robot_idx];
                     if let Some(new_hand) = robot.consume_new_hand() {
