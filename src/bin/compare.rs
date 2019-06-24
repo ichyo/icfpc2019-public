@@ -37,17 +37,16 @@ fn main() {
     let mut result: HashMap<String, Vec<(usize, String)>> = HashMap::new();
     for output_root in std::fs::read_to_string(path_file).unwrap().lines() {
         for input in &inputs {
-            let commands = {
-                let output_path = format!("{}/{}", output_root, input.output_file_name());
-                let mut output_file = File::open(&output_path).unwrap();
+            let output_path = format!("{}/{}", output_root, input.output_file_name());
+            if let Ok(mut output_file) = File::open(&output_path) {
                 let mut output_str = String::new();
                 output_file.read_to_string(&mut output_str).unwrap();
-                read_commands(&output_str)
-            };
-            result
-                .entry(input.id.to_owned())
-                .or_default()
-                .push((commands.len(), output_root.to_owned()));
+                let commands = read_commands(&output_str);
+                result
+                    .entry(input.id.to_owned())
+                    .or_default()
+                    .push((commands.len(), output_root.to_owned()));
+            }
         }
     }
     for input in &inputs {

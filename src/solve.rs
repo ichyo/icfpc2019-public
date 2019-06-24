@@ -33,6 +33,11 @@ impl Robot {
             Point::new(6, 0),
             Point::new(7, 0),
             Point::new(8, 0),
+            Point::new(9, 0),
+            Point::new(10, 0),
+            Point::new(11, 0),
+            Point::new(12, 0),
+            Point::new(13, 0),
         ]);
 
         let commands = robot.commands.clone();
@@ -223,18 +228,12 @@ impl<'a> State<'a> {
         }
 
         if self.remaining_hand > 0 {
-            if let Some((first_robot_index, _)) = self
-                .robots
-                .iter()
-                .enumerate()
-                .find(|(_, r)| !r.new_bodies.is_empty())
-            {
-                if robot_idx == first_robot_index {
-                    return match self.booster_map.get(goal.point()) {
-                        Some(Some(BoosterType::NewHand)) => true,
-                        _ => false,
-                    };
-                }
+            let first_robot_index = 0;
+            if robot_idx == first_robot_index {
+                return match self.booster_map.get(goal.point()) {
+                    Some(Some(BoosterType::NewHand)) => true,
+                    _ => false,
+                };
             }
         }
 
@@ -349,14 +348,16 @@ impl<'a> State<'a> {
             .iter()
             .filter_map(|diff| self.hand_reach(self.robots[robot_idx].current_place, *diff))
             .collect::<Vec<_>>();
-
-        let current_point = self.robots[robot_idx].current_place.point();
         for b in bodies {
             if let Some(false) = self.passed.get(b) {
                 self.passed.set(b, true);
                 self.remaining_pass -= 1;
             }
         }
+    }
+
+    pub fn get_booster(&mut self, robot_idx: usize) {
+        let current_point = self.robots[robot_idx].current_place.point();
         if let Some(Some(kind)) = self.booster_map.get(current_point) {
             match kind {
                 BoosterType::NewHand => {
@@ -388,13 +389,22 @@ impl<'a> State<'a> {
         let current_place = self.robots[robot_idx].current_place;
 
         if self.hand_count > 0 {
-            let robot = &mut self.robots[robot_idx];
-            if let Some(new_hand) = robot.consume_new_hand() {
-                self.hand_count -= 1;
-                let new_hand = robot.current_place.dir().convert(new_hand);
-                robot.commands.insert(self.turn, Command::NewHand(new_hand));
-                robot.commands.truncate(self.turn + 1);
-                return;
+            if let Some((first_non_empty_idx, _)) = self
+                .robots
+                .iter()
+                .enumerate()
+                .find(|(_, r)| !r.new_bodies.is_empty())
+            {
+                if first_non_empty_idx == robot_idx {
+                    let robot = &mut self.robots[robot_idx];
+                    if let Some(new_hand) = robot.consume_new_hand() {
+                        self.hand_count -= 1;
+                        let new_hand = robot.current_place.dir().convert(new_hand);
+                        robot.commands.insert(self.turn, Command::NewHand(new_hand));
+                        robot.commands.truncate(self.turn + 1);
+                        return;
+                    }
+                }
             }
         }
 
@@ -439,6 +449,7 @@ impl<'a> State<'a> {
         let robots_len = self.robots.len();
         for idx in 0..robots_len {
             self.pass_current_point(idx);
+            self.get_booster(idx);
 
             if self.remaining_pass == 0 {
                 return false;
@@ -464,6 +475,7 @@ impl<'a> State<'a> {
                 _ => unreachable!(),
             }
             self.robots[idx].executed.push(m);
+            self.pass_current_point(idx);
         }
         self.turn += 1;
         assert!(self.turn < 1_000_000_000);
