@@ -238,6 +238,7 @@ impl<'a> State<'a> {
             }
         }
 
+
         let not_passed = self.robots[robot_idx]
             .bodies_diff
             .iter()
@@ -513,7 +514,7 @@ pub fn determine_buy(task: &Task) -> Buy {
     let size = task.width * task.height;
 
     let clone_target = 1;
-    let threshold = 20_000;
+    let threshold = 10_010;
     if has_spawn && count_clone < clone_target && size > threshold {
         for _ in 0..clone_target - count_clone {
             buy.push(&BoosterType::Cloning);
