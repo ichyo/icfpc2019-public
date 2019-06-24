@@ -58,5 +58,10 @@ fn main() {
         let best_path = format!("{}/{}", best_root, input.output_file_name());
         let new_path = format!("{}/{}", output_root, input.output_file_name());
         std::fs::copy(best_path, new_path).unwrap();
+        let best_path = format!("{}/{}", best_root, input.buy_file_name());
+        let new_path = format!("{}/{}", output_root, input.buy_file_name());
+        if std::path::Path::new(&best_path).exists() {
+            std::fs::copy(best_path, new_path).unwrap();
+        }
     }
 }
