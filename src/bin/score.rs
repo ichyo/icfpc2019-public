@@ -3,9 +3,10 @@ use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
 use icfpc::parse::read_commands;
 use icfpc::utils::Matrix;
+use std::collections::HashMap;
+
 use std::fs::File;
 use std::io::Read;
-use std::collections::HashMap;
 
 struct ScoreInfo {
     width: usize,
@@ -70,7 +71,7 @@ fn score_small(task: Task, commands: Commands) -> ScoreInfo {
     ScoreInfo {
         width: width as usize,
         height: height as usize,
-        best_estimated: remaining * 32 / 100,
+        best_estimated: remaining * 24 / 100,
         team_time: commands.len(),
     }
 }
@@ -108,14 +109,15 @@ fn main() {
         for b in &input.task.boosters {
             *counter.entry(b.kind.clone()).or_insert(0) += 1;
         }
-        let count_info = format!("B:{} F:{} L:{} X:{} R:{} C:{}",
+        let count_info = format!(
+            "B:{} F:{} L:{} X:{} R:{} C:{}",
             counter.get(&BoosterType::NewHand).unwrap_or(&0),
             counter.get(&BoosterType::FastMove).unwrap_or(&0),
             counter.get(&BoosterType::Drill).unwrap_or(&0),
             counter.get(&BoosterType::Spawn).unwrap_or(&0),
             counter.get(&BoosterType::Teleports).unwrap_or(&0),
             counter.get(&BoosterType::Cloning).unwrap_or(&0),
-         );
+        );
         let score_info = score_small(input.task, commands);
         eprintln!("{}: {} ({})", input.id, score_info.debug(), count_info);
         sum_scores += score_info.score();
