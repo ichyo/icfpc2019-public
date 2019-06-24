@@ -284,6 +284,7 @@ impl fmt::Display for Booster {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Task {
+    pub id: String,
     pub width: usize,
     pub height: usize,
     pub map: Map,

@@ -127,7 +127,7 @@ impl Client {
         };
 
         let puzzle = read_puzzle(&blockinfo.puzzle);
-        let task = read_task(&blockinfo.task);
+        let task = read_task(&blockinfo.task, String::new());
         info!("solving puzzle");
         let puzzle_answer = solve_puzzle(puzzle);
         info!("solving task");

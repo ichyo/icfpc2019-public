@@ -225,6 +225,7 @@ pub fn solve_puzzle(puzzle: Puzzle) -> Option<Task> {
     ));
 
     let task = Task {
+        id: String::new(),
         width: len,
         height: len,
         map,

@@ -2,7 +2,7 @@ use crate::models::*;
 use crate::utils::Matrix;
 
 use rand::prelude::*;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Duration;
 use std::time::Instant;
 
@@ -526,8 +526,12 @@ pub fn determine_buy(task: &Task) -> Buy {
     let size = task.width * task.height;
 
     let clone_target = 1;
-    let threshold = 10_010;
-    if has_spawn && count_clone < clone_target && size > threshold {
+    let threshold = 10_000;
+    let ids = ["163", "159", "157", "100", "096", "095", "085"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<HashSet<_>>();
+    if has_spawn && count_clone < clone_target && (size > threshold || ids.contains(&task.id)) {
         for _ in 0..clone_target - count_clone {
             buy.push(&BoosterType::Cloning);
         }

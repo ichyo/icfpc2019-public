@@ -31,12 +31,13 @@ pub fn read_all_inputs(dir: &str) -> Vec<Input> {
     find_files(dir)
         .into_iter()
         .map(|f| {
+            let id = &f[5..8];
             let task_path = format!("{}/{}", dir, f);
             let mut task_file = File::open(&task_path).unwrap();
             let mut task_str = String::new();
             task_file.read_to_string(&mut task_str).unwrap();
             let task_str = task_str.trim_end();
-            let task = read_task(&task_str);
+            let task = read_task(&task_str, id.to_string());
             Input::new(&f, task)
         })
         .collect::<Vec<_>>()
@@ -154,7 +155,7 @@ fn read_boosters(mut iter: &mut Peekable<Chars>) -> Vec<Booster> {
     res
 }
 
-pub fn read_task(s: &str) -> Task {
+pub fn read_task(s: &str, id: String) -> Task {
     let mut iter = s.chars().peekable();
     let map = read_map(&mut iter);
     let initial = read_initial(&mut iter);
@@ -163,6 +164,7 @@ pub fn read_task(s: &str) -> Task {
     let width = map.compute_width();
     let height = map.compute_height();
     Task {
+        id,
         width,
         height,
         map,

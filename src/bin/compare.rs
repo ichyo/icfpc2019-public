@@ -41,7 +41,7 @@ fn main() {
             if let Ok(mut output_file) = File::open(&output_path) {
                 let mut output_str = String::new();
                 output_file.read_to_string(&mut output_str).unwrap();
-                if output_str.len() > 0 {
+                if !output_str.is_empty() {
                     let commands = read_commands(&output_str);
                     result
                         .entry(input.id.to_owned())
