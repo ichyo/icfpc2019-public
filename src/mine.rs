@@ -131,7 +131,7 @@ impl Client {
         info!("solving puzzle");
         let puzzle_answer = solve_puzzle(puzzle);
         info!("solving task");
-        let task_answer = solve_small_while(task, &Buy::empty(), std::time::Duration::from_secs(300));
+        let task_answer = solve_small_while(task, &Buy::new(), std::time::Duration::from_secs(300));
         info!("dumping");
 
         self.dump_task_answer(block, task_answer);

@@ -256,3 +256,20 @@ pub fn read_puzzle(s: &str) -> Puzzle {
         excludes: excludes.0,
     }
 }
+
+pub fn read_buy(s: &str) -> Buy {
+    let mut buy = Buy::new();
+    for c in s.chars() {
+        let booster_type = match c {
+            'B' => BoosterType::NewHand,
+            'F' => BoosterType::FastMove,
+            'L' => BoosterType::Drill,
+            'X' => BoosterType::Spawn,
+            'R' => BoosterType::Teleports,
+            'C' => BoosterType::Cloning,
+            _ => panic!("unknown type {}", c),
+        };
+        buy.push(&booster_type);
+    }
+    buy
+}

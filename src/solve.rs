@@ -104,7 +104,6 @@ pub struct State<'a> {
     remaining_clone: usize,
     remaining_pass: usize,
     hand_count: usize,
-    tele_count: usize,
     clone_count: usize,
     robots: Vec<Robot>,
 }
@@ -154,10 +153,17 @@ impl<'a> State<'a> {
         }
 
         let turn = 0;
-        let hand_count = 0;
-        let tele_count = 0;
-        let clone_count = 0;
+        let mut hand_count = 0;
+        let mut clone_count = 0;
         let robots = vec![Robot::initialize(task)];
+
+        for b in buy.iter() {
+            match b {
+                BoosterType::Cloning => clone_count += 1,
+                BoosterType::NewHand => hand_count += 1,
+                _ => {}
+            }
+        }
 
         State {
             task,
@@ -169,7 +175,6 @@ impl<'a> State<'a> {
             remaining_clone,
             remaining_pass,
             hand_count,
-            tele_count,
             clone_count,
             robots,
         }
@@ -359,7 +364,6 @@ impl<'a> State<'a> {
                     self.booster_map.set(current_point, None);
                 }
                 BoosterType::Teleports => {
-                    self.tele_count += 1;
                     self.booster_map.set(current_point, None);
                 }
                 BoosterType::Drill => {
@@ -493,5 +497,27 @@ pub fn solve_small(task: Task, buy: &Buy) -> Commands {
 }
 
 pub fn determine_buy(task: &Task) -> Buy {
-    Buy::empty()
+    let mut buy = Buy::new();
+
+    let has_spawn = task
+        .boosters
+        .iter()
+        .filter(|b| b.kind == BoosterType::Spawn)
+        .count()
+        != 0;
+    let count_clone = task
+        .boosters
+        .iter()
+        .filter(|b| b.kind == BoosterType::Cloning)
+        .count();
+    let size = task.width * task.height;
+
+    let clone_target = 1;
+    let threshold = 20_000;
+    if has_spawn && count_clone < clone_target && size > threshold {
+        for _ in 0..clone_target - count_clone {
+            buy.push(&BoosterType::Cloning);
+        }
+    }
+    buy
 }

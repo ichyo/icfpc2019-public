@@ -1,12 +1,15 @@
 use clap::{App, Arg};
 use icfpc::models::*;
 use icfpc::parse::read_all_inputs;
+
+use icfpc::parse::read_buy;
 use icfpc::parse::read_commands;
 use icfpc::utils::Matrix;
 use std::collections::HashMap;
 
 use std::fs::File;
 use std::io::Read;
+
 
 struct ScoreInfo {
     width: usize,
@@ -96,6 +99,7 @@ fn main() {
     let output_root = matches.value_of("output").expect("no output specified");
     let inputs = read_all_inputs(input_root);
 
+    let mut sum_buy = 0;
     let mut sum_scores = 0.0;
     for input in inputs {
         let commands = {
@@ -104,6 +108,16 @@ fn main() {
             let mut output_str = String::new();
             output_file.read_to_string(&mut output_str).unwrap();
             read_commands(&output_str)
+        };
+        let buy = {
+            let output_path = format!("{}/{}", output_root, input.buy_file_name());
+            if let Ok(mut output_file) = File::open(&output_path) {
+                let mut output_str = String::new();
+                output_file.read_to_string(&mut output_str).unwrap();
+                read_buy(&output_str)
+            } else {
+                Buy::new()
+            }
         };
         let mut counter = HashMap::new();
         for b in &input.task.boosters {
@@ -119,9 +133,17 @@ fn main() {
             counter.get(&BoosterType::Cloning).unwrap_or(&0),
         );
         let score_info = score_small(input.task, commands);
-        eprintln!("{}: {} ({})", input.id, score_info.debug(), count_info);
+        eprintln!(
+            "{}: {} (buy: {}) ({})",
+            input.id,
+            score_info.debug(),
+            buy.money(),
+            count_info
+        );
         sum_scores += score_info.score();
+        sum_buy += buy.money();
     }
     println!("output: {}", output_root);
     println!("total_score: {}", sum_scores);
+    println!("total_buy: {}", sum_buy);
 }

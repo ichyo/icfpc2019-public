@@ -412,17 +412,30 @@ impl fmt::Display for Commands {
     }
 }
 
+#[derive(Default)]
 pub struct Buy(Vec<BoosterType>);
 
 impl Buy {
-    pub fn empty() -> Buy {
-        Buy::new(Vec::new())
-    }
-    pub fn new(bs: Vec<BoosterType>) -> Buy {
-        Buy(bs)
+    pub fn new() -> Buy {
+        Buy(Vec::new())
     }
     pub fn push(&mut self, b: &BoosterType) {
         self.0.push(b.clone());
+    }
+    pub fn iter(&self) -> impl Iterator<Item=&BoosterType> {
+        self.0.iter()
+    }
+    pub fn money(&self) -> usize {
+        self.0.iter().map(|b|
+            match b {
+                BoosterType::Cloning => 2000,
+                BoosterType::Drill => 700,
+                BoosterType::Teleports => 1200,
+                BoosterType::FastMove => 300,
+                BoosterType::NewHand => 1000,
+                BoosterType::Spawn => unreachable!(),
+            }
+        ).sum::<usize>()
     }
 }
 

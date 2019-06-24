@@ -15,7 +15,7 @@ echo "$(date +"%Y-%m-%d %T"): Creating $OUTPUT" | tee -a $LOG_FILE
 mkdir -p $OUTPUT
 
 SECONDS=0
-./target/release/icfpc2019 --output $OUTPUT --input ./input --duration 90000
+./target/release/icfpc2019 --output $OUTPUT --input ./input --duration 300
 echo "$(date +"%Y-%m-%d %T"): running time is $SECONDS secs" | tee -a $LOG_FILE
 
 echo "$(date +"%Y-%m-%d %T"): Creating zip $OUTPUT/solutions.zip" | tee -a $LOG_FILE
