@@ -1,5 +1,5 @@
 # icfpc2019
 https://icfpcontest2019.github.io
 
-This is a public repository that contains solutions for icfp contest 2019.
-This was created from private repository removing private key and output and logs.
+This is a repository to manage solutions for ICFP Programming Contest 2019.
+This took 17th place in Final score board.
